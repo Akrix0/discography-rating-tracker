@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BarChart3, Disc3, LogOut, Music2, Settings, Users } from 'lucide-react';
+import { Activity, BarChart3, Disc3, LogOut, Music2, Settings, Users } from 'lucide-react';
 import { ArtistDropdown } from './ArtistDropdown';
 import { PreferencesToggle } from './PreferencesToggle';
 import { useAuth } from '../context/AuthContext';
@@ -69,6 +69,27 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {user?.isAdmin && (
+            <NavLink
+              to="/admin"
+              title={t.navAdmin}
+              aria-label={t.navAdmin}
+              className={({ isActive }) =>
+                `h-8 px-2 2xl:px-2.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shrink-0 ${
+                  isActive
+                    ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
+                    : 'bg-[#13151c] text-[#9ca3af] hover:text-[#f3efe6] border-white/10 hover:bg-white/10'
+                }`
+              }
+            >
+              <span className="relative flex items-center justify-center">
+                <Activity className="w-4 h-4 shrink-0 text-[#5fb38e]" />
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#5fb38e]" />
+              </span>
+              <span className="hidden 2xl:inline whitespace-nowrap">{t.navAdmin}</span>
+            </NavLink>
+          )}
+
           <PreferencesToggle />
 
           {user && (

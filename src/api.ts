@@ -1,4 +1,5 @@
 import type {
+  AdminAnalyticsResponse,
   ArtistCandidate,
   ArtistSummary,
   AuthUser,
@@ -161,6 +162,14 @@ export const api = {
       '/api/import/userdata',
       { method: 'POST', body: JSON.stringify(payload) }
     ),
+
+  // Presence & Admin Analytics
+  sendPresence: (payload: { path: string; referrer?: string; event: 'pageview' | 'heartbeat' }) =>
+    request<{ ok: boolean }>('/api/presence', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getAdminAnalytics: () => request<AdminAnalyticsResponse>('/api/admin/analytics'),
 };
 
 export function formatDuration(ms: number | null): string {

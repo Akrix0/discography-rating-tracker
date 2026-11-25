@@ -163,3 +163,30 @@ export function createRateLimiter(opts: {
     next();
   };
 }
+
+export function getAdminUserId(): number {
+  return Number(process.env.ADMIN_USER_ID || 1);
+}
+
+export function getAdminEmail(): string {
+  return (process.env.ADMIN_EMAIL || 'romankits08@gmail.com').trim().toLowerCase();
+}
+
+/**
+ * Multi-layer admin verification: requires explicit DB flag, configured user ID,
+ * configured lowercase email, an active password hash, and optional display name match.
+ */
+export function isStrictAdminRow(row: Record<string, unknown> | undefined | null): boolean {
+  if (!row) return false;
+  if (Number(row.is_admin) !== 1) return false;
+  if (Number(row.id) !== getAdminUserId()) return false;
+  if (String(row.email || '').trim().toLowerCase() !== getAdminEmail()) return false;
+  if (!row.password_hash) return false;
+  const requiredName = process.env.ADMIN_DISPLAY_NAME?.trim();
+  if (requiredName && String(row.display_name || '') !== requiredName) return false;
+  return true;
+}
+
+export function hashIpForAnalytics(ip: string): string {
+  return sha256Hex(`dtr-analytics-ip:${ip}`).slice(0, 16);
+}

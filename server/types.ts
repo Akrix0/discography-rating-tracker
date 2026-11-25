@@ -4,6 +4,7 @@ export interface UserDTO {
   displayName: string;
   avatarUrl: string | null;
   createdAt: string;
+  isAdmin: boolean;
 }
 
 export const CATEGORIES = [

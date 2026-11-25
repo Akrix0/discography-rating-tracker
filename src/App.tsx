@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
 import { Navbar } from './components/Navbar';
 import { AddArtistModal } from './components/AddArtistModal';
+import { PresenceTracker } from './components/PresenceTracker';
 import { ArtistsHubPage } from './pages/ArtistsHubPage';
 import { ArtistDashboardPage } from './pages/ArtistDashboardPage';
 import { SongsPage } from './pages/SongsPage';
@@ -12,6 +13,7 @@ import { ReleasesPage } from './pages/ReleasesPage';
 import { ReleaseDetailPage } from './pages/ReleaseDetailPage';
 import { SettingsDataPage } from './pages/SettingsDataPage';
 import { AuthPage } from './pages/AuthPage';
+import { AdminAnalyticsPage } from './pages/AdminAnalyticsPage';
 
 function AppRoutes() {
   const { user, loadingAuth } = useAuth();
@@ -28,15 +30,19 @@ function AppRoutes() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <>
+        <PresenceTracker />
+        <Routes>
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </>
     );
   }
 
   return (
     <ArtistProvider>
+      <PresenceTracker />
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <AddArtistModal />
@@ -49,6 +55,10 @@ function AppRoutes() {
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/releases/:idOrSlug" element={<ReleaseDetailPage />} />
             <Route path="/settings" element={<SettingsDataPage />} />
+            <Route
+              path="/admin"
+              element={user.isAdmin ? <AdminAnalyticsPage /> : <Navigate to="/" replace />}
+            />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

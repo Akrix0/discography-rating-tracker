@@ -4,6 +4,7 @@ export interface AuthUser {
   displayName: string;
   avatarUrl: string | null;
   createdAt: string;
+  isAdmin?: boolean;
 }
 
 export const CATEGORIES = [
@@ -294,4 +295,72 @@ export interface FilterState {
   hideSecondary: boolean;
   sortBy: 'release_date' | 'title' | 'rating' | 'created_at';
   sortDir: 'asc' | 'desc';
+}
+
+export interface AdminVisitorSession {
+  visitorIdShort: string;
+  userId: number | null;
+  displayName: string | null;
+  email: string | null;
+  isAdmin: boolean;
+  currentPath: string;
+  country: string | null;
+  deviceType: 'mobile' | 'tablet' | 'desktop';
+  browser: string;
+  os: string;
+  referrer: string | null;
+  pageViews: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  isOnline: boolean;
+}
+
+export interface AdminUserActivity {
+  id: number;
+  email: string;
+  displayName: string;
+  isAdmin: boolean;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+  lastPath: string | null;
+  artistsCount: number;
+  songRatingsCount: number;
+  releaseRatingsCount: number;
+  notesCount: number;
+  totalPageViews: number;
+  deviceType: string | null;
+  browser: string | null;
+  os: string | null;
+  country: string | null;
+  createdAt: string;
+}
+
+export interface AdminAnalyticsResponse {
+  generatedAt: string;
+  summary: {
+    onlineTotal: number;
+    onlineUsers: number;
+    onlineGuests: number;
+    visitors24h: number;
+    pageViews24h: number;
+    visitors7d: number;
+    pageViews7d: number;
+    visitors30d: number;
+    pageViews30d: number;
+    totalVisitorsAllTime: number;
+    totalUsers: number;
+    totalSongRatings: number;
+    totalReleaseRatings: number;
+    totalNotes: number;
+  };
+  onlineNow: AdminVisitorSession[];
+  dailySeries: { date: string; uniqueVisitors: number; pageViews: number }[];
+  users: AdminUserActivity[];
+  recentVisitors: AdminVisitorSession[];
+  breakdowns: {
+    devices: { label: string; count: number }[];
+    browsers: { label: string; count: number }[];
+    countries: { label: string; count: number }[];
+    topPaths: { path: string; views: number }[];
+  };
 }

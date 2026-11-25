@@ -3,7 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient, type Client, type InArgs, type InStatement } from '@libsql/client';
 import type { CatalogFile, Category, ReleaseType } from './types.ts';
-import { decryptText, encryptText } from './services/security.ts';
+import {
+  decryptText,
+  encryptText,
+  getAdminEmail,
+  getAdminUserId,
+} from './services/security.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT_DIR = path.resolve(__dirname, '..');
@@ -271,7 +276,57 @@ async function createSchema(db: Db): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_song_ratings_user ON song_ratings(user_id);
     CREATE INDEX IF NOT EXISTS idx_release_ratings_user ON release_ratings(user_id);
     CREATE INDEX IF NOT EXISTS idx_notes_user_target ON notes(user_id, target_type, target_id);
+
+    CREATE TABLE IF NOT EXISTS visitor_sessions (
+      visitor_id TEXT PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ip_hash TEXT,
+      country TEXT,
+      device_type TEXT NOT NULL DEFAULT 'desktop',
+      browser TEXT NOT NULL DEFAULT 'Other',
+      os TEXT NOT NULL DEFAULT 'Other',
+      current_path TEXT NOT NULL DEFAULT '/',
+      referrer TEXT,
+      page_views INTEGER NOT NULL DEFAULT 1,
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_visitor_last_seen ON visitor_sessions(last_seen_at);
+    CREATE INDEX IF NOT EXISTS idx_visitor_user ON visitor_sessions(user_id);
+
+    CREATE TABLE IF NOT EXISTS visit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      visitor_id TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      path TEXT NOT NULL,
+      country TEXT,
+      device_type TEXT NOT NULL DEFAULT 'desktop',
+      browser TEXT NOT NULL DEFAULT 'Other',
+      os TEXT NOT NULL DEFAULT 'Other',
+      referrer TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_visit_logs_created ON visit_logs(created_at);
+    CREATE INDEX IF NOT EXISTS idx_visit_logs_visitor ON visit_logs(visitor_id);
   `);
+
+  const userCols = await db.all<{ name: string }>('PRAGMA table_info(users)');
+  const colNames = new Set(userCols.map((c) => c.name));
+  if (!colNames.has('is_admin')) {
+    await db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;');
+  }
+  if (!colNames.has('last_seen_at')) {
+    await db.exec('ALTER TABLE users ADD COLUMN last_seen_at TEXT;');
+  }
+  if (!colNames.has('last_path')) {
+    await db.exec('ALTER TABLE users ADD COLUMN last_path TEXT;');
+  }
+
+  // Strictly enforce admin flag for the single configured owner account only
+  await db.run(
+    `UPDATE users SET is_admin = CASE WHEN id = ? AND lower(email) = ? THEN 1 ELSE 0 END`,
+    [getAdminUserId(), getAdminEmail()]
+  );
 }
 
 async function seedMotherMotherIfEmpty(db: Db): Promise<void> {

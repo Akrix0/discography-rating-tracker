@@ -4,7 +4,10 @@ import {
   createRateLimiter,
   DUMMY_SCRYPT_HASH,
   generateSecureToken,
+  getAdminEmail,
+  getAdminUserId,
   hashPassword,
+  isStrictAdminRow,
   sha256Hex,
   verifyPassword,
 } from '../services/security.ts';
@@ -41,6 +44,7 @@ function mapUserRow(r: Record<string, unknown>): UserDTO {
     displayName: String(r.display_name),
     avatarUrl: r.avatar_url ? String(r.avatar_url) : null,
     createdAt: String(r.created_at),
+    isAdmin: isStrictAdminRow(r),
   };
 }
 
@@ -102,6 +106,29 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
+export function requireAdmin(getDbFn: () => Promise<Db>) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user || !req.user.isAdmin) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      const db = await getDbFn();
+      const row = await db.get<Record<string, unknown>>(
+        `SELECT id, email, display_name, password_hash, is_admin FROM users WHERE id = ?`,
+        [req.user.id]
+      );
+      if (!isStrictAdminRow(row)) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      next();
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function createAuthRouter(getDbFn: () => Promise<Db>) {
@@ -146,6 +173,9 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
     );
 
     const userId = ins.lastInsertRowid;
+    if (Number(userId) === getAdminUserId() && email === getAdminEmail()) {
+      await db.run('UPDATE users SET is_admin = 1 WHERE id = ?', [userId]);
+    }
     await attachDefaultArtistsForUser(db, userId);
     await createSessionForUser(db, userId, req, res);
 
