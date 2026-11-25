@@ -1,8 +1,9 @@
 import { Search, RotateCcw, SlidersHorizontal, EyeOff } from 'lucide-react';
+import { usePreferences } from '../context/PreferencesContext';
+import { RELEASE_TYPE_I18N } from '../i18n/translations';
 import {
   CATEGORIES,
   CATEGORY_META,
-  RELEASE_TYPE_LABELS,
   type Category,
   type FilterMetaResponse,
   type FilterState,
@@ -39,6 +40,8 @@ export function FilterBar({
   totalResults,
   mode,
 }: FilterBarProps) {
+  const { lang, t } = usePreferences();
+
   const toggleCategory = (cat: Category) => {
     const exists = filters.categories.includes(cat);
     const nextCats = exists
@@ -69,18 +72,14 @@ export function FilterBar({
             type="text"
             value={filters.q}
             onChange={(e) => onChange({ ...filters, q: e.target.value })}
-            placeholder={
-              mode === 'songs'
-                ? 'Пошук за назвою пісні, альбому, артиста або типом…'
-                : 'Пошук релізу за назвою, артистом або типом…'
-            }
+            placeholder={mode === 'songs' ? t.searchSongsPlaceholder : t.searchReleasesPlaceholder}
             className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#0b0c10] border border-white/10 text-sm text-[#f3efe6] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]"
           />
         </div>
 
         <div className="md:col-span-3">
           <select
-            aria-label="Сортувати за"
+            aria-label="Sort by"
             value={`${filters.sortBy}:${filters.sortDir}`}
             onChange={(e) => {
               const [sortBy, sortDir] = e.target.value.split(':') as [
@@ -91,25 +90,25 @@ export function FilterBar({
             }}
             className="w-full h-10 px-3 rounded-xl bg-[#0b0c10] border border-white/10 text-sm text-[#f3efe6] focus:outline-none focus:border-[#e09f5a]"
           >
-            <option value="release_date:desc">Дата виходу (найновіші)</option>
-            <option value="release_date:asc">Дата виходу (найстаріші)</option>
-            <option value="title:asc">За назвою (A–Z)</option>
-            <option value="title:desc">За назвою (Z–A)</option>
-            <option value="rating:desc">Оцінка (найвища → найнижча)</option>
-            <option value="rating:asc">Оцінка (найнижча → найвища)</option>
-            <option value="created_at:desc">Дата додавання (новіші)</option>
-            <option value="created_at:asc">Дата додавання (раніші)</option>
+            <option value="release_date:desc">{t.sortDateDesc}</option>
+            <option value="release_date:asc">{t.sortDateAsc}</option>
+            <option value="title:asc">{t.sortTitleAsc}</option>
+            <option value="title:desc">{t.sortTitleDesc}</option>
+            <option value="rating:desc">{t.sortRatingDesc}</option>
+            <option value="rating:asc">{t.sortRatingAsc}</option>
+            <option value="created_at:desc">{t.sortAddedDesc}</option>
+            <option value="created_at:asc">{t.sortAddedAsc}</option>
           </select>
         </div>
 
         <div className="md:col-span-2">
           <select
-            aria-label="Рік виходу"
+            aria-label="Release year"
             value={filters.year}
             onChange={(e) => onChange({ ...filters, year: e.target.value })}
             className="w-full h-10 px-3 rounded-xl bg-[#0b0c10] border border-white/10 text-sm text-[#f3efe6] focus:outline-none focus:border-[#e09f5a]"
           >
-            <option value="">Усі роки</option>
+            <option value="">{t.allYears}</option>
             {(meta?.years || []).map((y) => (
               <option key={y} value={String(y)}>
                 {y}
@@ -126,7 +125,7 @@ export function FilterBar({
             className="w-full h-10 px-3 rounded-xl border border-white/10 text-xs sm:text-sm font-medium inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-white/[0.03] hover:bg-white/[0.08] text-[#f3efe6]"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Скинути</span>
+            <span>{t.resetShort}</span>
           </button>
         </div>
       </div>
@@ -134,7 +133,7 @@ export function FilterBar({
       <div className="flex items-center gap-2 flex-wrap">
         <span className="inline-flex items-center gap-1 text-xs text-[#9ca3af] mr-1">
           <SlidersHorizontal className="w-3.5 h-3.5" />
-          Категорії:
+          {t.categoriesLabel}
         </span>
         {CATEGORIES.map((cat) => {
           const active = filters.categories.includes(cat);
@@ -163,9 +162,9 @@ export function FilterBar({
           <div className="inline-flex rounded-xl bg-[#0b0c10] p-1 border border-white/[0.08]">
             {(
               [
-                { key: 'all', label: 'Усі' },
-                { key: 'rated', label: 'Оцінені' },
-                { key: 'unrated', label: 'Неоцінені' },
+                { key: 'all', label: t.statusAll },
+                { key: 'rated', label: t.statusRated },
+                { key: 'unrated', label: t.statusUnrated },
               ] as const
             ).map((opt) => (
               <button
@@ -174,7 +173,7 @@ export function FilterBar({
                 onClick={() => onChange({ ...filters, ratedStatus: opt.key })}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                   filters.ratedStatus === opt.key
-                    ? 'bg-[#d95d4e] text-[#f3efe6]'
+                    ? 'bg-[#d95d4e] text-white'
                     : 'text-[#9ca3af] hover:text-[#f3efe6]'
                 }`}
               >
@@ -192,14 +191,13 @@ export function FilterBar({
                 ? 'bg-[#e09f5a]/20 text-[#e09f5a] border-[#e09f5a]/50'
                 : 'bg-[#0b0c10] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
             }`}
-            title="Приховати Sped Up, Slowed Down, Live, Ремікси та Демо версії"
           >
             <EyeOff className="w-3.5 h-3.5" />
-            <span>Приховати альт-версії / Live / Ремікси</span>
+            <span>{t.hideSecondary}</span>
           </button>
 
           <select
-            aria-label="Тип релізу"
+            aria-label="Release type"
             value={filters.releaseTypes[0] || ''}
             onChange={(e) =>
               onChange({
@@ -209,21 +207,21 @@ export function FilterBar({
             }
             className="h-8 px-2.5 rounded-lg bg-[#0b0c10] border border-white/10 text-xs text-[#f3efe6] focus:outline-none focus:border-[#e09f5a]"
           >
-            <option value="">Усі типи релізів</option>
+            <option value="">{t.allReleaseTypes}</option>
             {(meta?.releaseTypes || []).map((rt) => (
               <option key={rt.release_type} value={rt.release_type}>
-                {RELEASE_TYPE_LABELS[rt.release_type] || rt.release_type} ({rt.count})
+                {RELEASE_TYPE_I18N[lang][rt.release_type] || rt.release_type} ({rt.count})
               </option>
             ))}
           </select>
 
           <div className="flex items-center gap-1.5 text-xs text-[#9ca3af]">
-            <span>Оцінка:</span>
+            <span>{t.ratingLabel}</span>
             <input
               type="number"
               min={0}
               max={100}
-              aria-label="Мінімальна оцінка"
+              aria-label="Min rating"
               value={filters.minRating}
               onChange={(e) => {
                 const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
@@ -236,7 +234,7 @@ export function FilterBar({
               type="number"
               min={0}
               max={100}
-              aria-label="Максимальна оцінка"
+              aria-label="Max rating"
               value={filters.maxRating}
               onChange={(e) => {
                 const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
@@ -248,10 +246,8 @@ export function FilterBar({
         </div>
 
         <div className="text-xs text-[#9ca3af]">
-          Знайдено:{' '}
-          <span className="font-mono-num font-semibold text-[#f3efe6]">
-            {totalResults}
-          </span>
+          {t.foundCount}{' '}
+          <span className="font-mono-num font-semibold text-[#f3efe6]">{totalResults}</span>
         </div>
       </div>
     </section>

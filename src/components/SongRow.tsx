@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Clock, Disc3, ExternalLink } from 'lucide-react';
 import { api, formatDuration } from '../api';
+import { usePreferences } from '../context/PreferencesContext';
 import { CATEGORY_META, type Song } from '../types';
 import { RatingControl } from './RatingControl';
 import { SpotifyEmbed } from './SpotifyEmbed';
@@ -13,10 +14,11 @@ interface SongRowProps {
 }
 
 export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }: SongRowProps) {
+  const { t } = usePreferences();
   const catMeta = CATEGORY_META[song.category] || CATEGORY_META.Other;
 
   return (
-    <article className="group rounded-2xl bg-[#13151c] border border-white/[0.07] hover:border-white/[0.15] p-4 transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-black/30">
+    <article className="group rounded-2xl bg-[#13151c] border border-white/[0.07] hover:border-white/[0.15] p-4 transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-black/15">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
         <div className="lg:col-span-4 flex items-start gap-3.5 min-w-0">
           {trackNumber !== undefined && (
@@ -90,7 +92,7 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
                 ))}
                 {song.releases.length > 3 && (
                   <span className="text-[11px] text-[#6b7280]">
-                    +{song.releases.length - 3} ще
+                    {t.moreReleases(song.releases.length - 3)}
                   </span>
                 )}
               </div>
@@ -115,7 +117,7 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
                 rel="noopener noreferrer"
                 className="text-[11px] text-[#1DB954] inline-flex items-center gap-1 hover:underline"
               >
-                Відкрити трек у Spotify <ExternalLink className="w-3 h-3" />
+                {t.openInSpotify} <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           )}
@@ -129,7 +131,7 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
             onSaveRating={(r) => api.saveSongRating(song.id, r)}
             onSaveNote={(n) => api.saveSongNote(song.id, n)}
             onUpdated={(patch) => onSongUpdated?.(song.id, patch)}
-            notePlaceholder="Нотатка до композиції..."
+            notePlaceholder={t.songNotePlaceholder}
           />
         </div>
       </div>

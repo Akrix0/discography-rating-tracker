@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ArtistProvider } from './context/ArtistContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PreferencesProvider, usePreferences } from './context/PreferencesContext';
 import { Navbar } from './components/Navbar';
 import { AddArtistModal } from './components/AddArtistModal';
 import { ArtistsHubPage } from './pages/ArtistsHubPage';
@@ -14,12 +15,13 @@ import { AuthPage } from './pages/AuthPage';
 
 function AppRoutes() {
   const { user, loadingAuth } = useAuth();
+  const { t } = usePreferences();
 
   if (loadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center text-[#9ca3af] gap-2.5 text-sm">
         <Loader2 className="w-5 h-5 animate-spin text-[#e09f5a]" />
-        <span>Перевірка сесії…</span>
+        <span>{t.checkingSession}</span>
       </div>
     );
   }
@@ -53,7 +55,7 @@ function AppRoutes() {
         </main>
 
         <footer className="border-t border-white/[0.06] py-5 text-center text-xs text-[#6b7280]">
-          Discography &amp; Rating Tracker • Захищений хмарний архів (Turso libSQL + AES-256-GCM)
+          Discography &amp; Rating Tracker
         </footer>
       </div>
     </ArtistProvider>
@@ -62,9 +64,11 @@ function AppRoutes() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <PreferencesProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </PreferencesProvider>
   );
 }
 

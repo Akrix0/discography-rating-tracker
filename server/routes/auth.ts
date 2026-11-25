@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import { attachDefaultArtistsForUser, type Db } from '../db.ts';
 import {
   createRateLimiter,
+  DUMMY_SCRYPT_HASH,
   generateSecureToken,
   hashPassword,
   sha256Hex,
@@ -11,6 +12,8 @@ import type { UserDTO } from '../types.ts';
 
 export const SESSION_COOKIE_NAME = 'dtr_session';
 const SESSION_TTL_DAYS = 30;
+const MAX_EMAIL_LEN = 254;
+const MAX_PASSWORD_LEN = 256;
 
 declare global {
   namespace Express {
@@ -49,9 +52,12 @@ async function createSessionForUser(
 ): Promise<void> {
   const rawToken = generateSecureToken(32);
   const tokenHash = sha256Hex(rawToken);
+  const nowIso = new Date().toISOString();
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const ua = String(req.get('user-agent') || '').slice(0, 250);
 
+  // Clean up expired sessions opportunistically
+  await db.run('DELETE FROM sessions WHERE expires_at <= ?', [nowIso]);
   await db.run(
     `INSERT INTO sessions (id, user_id, user_agent, expires_at) VALUES (?, ?, ?, ?)`,
     [tokenHash, userId, ua, expiresAt]
@@ -117,12 +123,12 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
     const password = String(req.body?.password || '');
     const displayName = String(req.body?.displayName || '').trim() || email.split('@')[0];
 
-    if (!EMAIL_REGEX.test(email)) {
+    if (!EMAIL_REGEX.test(email) || email.length > MAX_EMAIL_LEN) {
       res.status(400).json({ error: 'Введіть коректну електронну пошту.' });
       return;
     }
-    if (password.length < 8) {
-      res.status(400).json({ error: 'Пароль повинен містити щонайменше 8 символів.' });
+    if (password.length < 8 || password.length > MAX_PASSWORD_LEN) {
+      res.status(400).json({ error: 'Пароль повинен містити від 8 до 256 символів.' });
       return;
     }
 
@@ -152,8 +158,8 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
 
-    if (!email || !password) {
-      res.status(400).json({ error: 'Введіть електронну пошту та пароль.' });
+    if (!email || !password || email.length > MAX_EMAIL_LEN || password.length > MAX_PASSWORD_LEN) {
+      res.status(400).json({ error: 'Введіть коректну електронну пошту та пароль.' });
       return;
     }
 
@@ -161,6 +167,8 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
       email,
     ]);
     if (!userRow) {
+      // Constant-time mitigation against timing-based email enumeration
+      await verifyPassword(password, DUMMY_SCRYPT_HASH);
       res.status(401).json({ error: 'Невірна пошта або пароль.' });
       return;
     }
@@ -200,6 +208,7 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
     if (req.sessionIdHash) {
       await db.run('DELETE FROM sessions WHERE id = ?', [req.sessionIdHash]);
     }
+    await db.run('DELETE FROM sessions WHERE expires_at <= ?', [new Date().toISOString()]);
     res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
     res.json({ ok: true });
   });
@@ -222,6 +231,22 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
       return;
     }
 
+    const emailChanged = email !== undefined && email !== String(userRow.email);
+    const passwordChanged = Boolean(newPassword);
+
+    // Require currentPassword verification whenever sensitive credentials (email or password) change
+    if ((emailChanged || passwordChanged) && userRow.password_hash) {
+      if (currentPassword.length > MAX_PASSWORD_LEN) {
+        res.status(400).json({ error: 'Некоректний пароль.' });
+        return;
+      }
+      const ok = await verifyPassword(currentPassword, String(userRow.password_hash));
+      if (!ok) {
+        res.status(400).json({ error: 'Поточний пароль вказано невірно.' });
+        return;
+      }
+    }
+
     if (displayName !== undefined && displayName.length >= 1) {
       await db.run(`UPDATE users SET display_name = ?, updated_at = datetime('now') WHERE id = ?`, [
         displayName.slice(0, 60),
@@ -229,8 +254,8 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
       ]);
     }
 
-    if (email !== undefined && email !== String(userRow.email)) {
-      if (!EMAIL_REGEX.test(email)) {
+    if (emailChanged && email !== undefined) {
+      if (!EMAIL_REGEX.test(email) || email.length > MAX_EMAIL_LEN) {
         res.status(400).json({ error: 'Некоректна електронна пошта.' });
         return;
       }
@@ -248,23 +273,23 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
       );
     }
 
-    if (newPassword) {
-      if (newPassword.length < 8) {
-        res.status(400).json({ error: 'Новий пароль повинен мати щонайменше 8 символів.' });
+    if (passwordChanged) {
+      if (newPassword.length < 8 || newPassword.length > MAX_PASSWORD_LEN) {
+        res.status(400).json({ error: 'Новий пароль повинен містити від 8 до 256 символів.' });
         return;
-      }
-      if (userRow.password_hash) {
-        const ok = await verifyPassword(currentPassword, String(userRow.password_hash));
-        if (!ok) {
-          res.status(400).json({ error: 'Поточний пароль вказано невірно.' });
-          return;
-        }
       }
       const hash = await hashPassword(newPassword);
       await db.run(`UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`, [
         hash,
         userId,
       ]);
+      // Revoke all other sessions for security while preserving current session
+      if (req.sessionIdHash) {
+        await db.run(`DELETE FROM sessions WHERE user_id = ? AND id != ?`, [
+          userId,
+          req.sessionIdHash,
+        ]);
+      }
     }
 
     const updated = await db.get<Record<string, unknown>>('SELECT * FROM users WHERE id = ?', [

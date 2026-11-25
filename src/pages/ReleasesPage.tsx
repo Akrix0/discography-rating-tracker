@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Disc3 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
+import { usePreferences } from '../context/PreferencesContext';
 import {
   CATEGORIES,
   type Category,
@@ -15,6 +16,7 @@ import { ReleaseCard } from '../components/ReleaseCard';
 
 export function ReleasesPage() {
   const { selectedArtistId, selectedArtist } = useArtist();
+  const { t } = usePreferences();
   const [searchParams, setSearchParams] = useSearchParams();
   const [meta, setMeta] = useState<FilterMetaResponse | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
@@ -86,11 +88,9 @@ export function ReleasesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
-          {selectedArtist ? `Релізи: ${selectedArtist.name}` : 'Усі релізи бібліотеки'}
+          {selectedArtist ? t.releasesOf(selectedArtist.name) : t.allLibraryReleases}
         </h1>
-        <p className="text-sm text-[#9ca3af] mt-1">
-          Натисніть на картку, щоб відкрити сторінку релізу, виставити йому незалежну оцінку та прослухати треки.
-        </p>
+        <p className="text-sm text-[#9ca3af] mt-1">{t.releasesPageSub}</p>
       </div>
 
       <FilterBar
@@ -111,13 +111,13 @@ export function ReleasesPage() {
       ) : releases.length === 0 ? (
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-12 text-center space-y-3">
           <Disc3 className="w-10 h-10 text-[#4b5563] mx-auto" />
-          <div className="text-base font-medium text-[#f3efe6]">Релізів не знайдено</div>
+          <div className="text-base font-medium text-[#f3efe6]">{t.noReleasesFound}</div>
           <button
             type="button"
             onClick={() => handleChange(DEFAULT_FILTERS)}
             className="px-4 py-2 rounded-xl bg-[#d95d4e] text-white text-sm font-medium"
           >
-            Скинути фільтри
+            {t.resetAllFilters}
           </button>
         </div>
       ) : (

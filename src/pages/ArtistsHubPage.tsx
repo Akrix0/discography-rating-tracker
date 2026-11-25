@@ -14,12 +14,14 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
+import { usePreferences } from '../context/PreferencesContext';
 import type { GlobalStatsResponse } from '../types';
 import { SongRow } from '../components/SongRow';
 import { ReleaseCard } from '../components/ReleaseCard';
 
 export function ArtistsHubPage() {
   const { setSelectedArtistId, refreshArtists, openAddModal } = useArtist();
+  const { t } = usePreferences();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<GlobalStatsResponse | null>(null);
@@ -50,7 +52,7 @@ export function ArtistsHubPage() {
 
   const handleSyncArtist = async (artistId: number) => {
     setSyncingArtistId(artistId);
-    setSyncProgress({ percent: 5, stage: 'Перевірка оновлень…' });
+    setSyncProgress({ percent: 5, stage: '…' });
     try {
       const { jobId } = await api.syncArtist(artistId);
       const timer = window.setInterval(async () => {
@@ -61,16 +63,14 @@ export function ArtistsHubPage() {
             window.clearInterval(timer);
             setSyncingArtistId(null);
             setSyncProgress(null);
-            setToast(
-              `Оновлено ${st.artistName}: +${st.addedReleases} релізів, +${st.addedSongs} пісень.`
-            );
+            setToast(`${st.artistName}: +${st.addedReleases}, +${st.addedSongs}`);
             await refreshArtists();
             await loadGlobal();
           } else if (st.status === 'error') {
             window.clearInterval(timer);
             setSyncingArtistId(null);
             setSyncProgress(null);
-            setToast(`Помилка оновлення: ${st.error}`);
+            setToast(`${t.errorText}: ${st.error}`);
           }
         } catch {
           // retry
@@ -79,7 +79,7 @@ export function ArtistsHubPage() {
     } catch (err) {
       setSyncingArtistId(null);
       setSyncProgress(null);
-      setToast(err instanceof Error ? err.message : 'Помилка синхронізації');
+      setToast(err instanceof Error ? err.message : t.errorText);
     }
   };
 
@@ -89,7 +89,7 @@ export function ArtistsHubPage() {
     const updated = await refreshArtists();
     setSelectedArtistId(updated[0]?.id ?? null);
     await loadGlobal();
-    setToast('Виконавця та всі його дані видалено.');
+    setToast(t.artistDeletedToast);
   };
 
   if (loading || !stats) {
@@ -107,19 +107,16 @@ export function ArtistsHubPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header & Global Summary */}
       <section className="rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-2.5 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e09f5a]/15 border border-[#e09f5a]/30 text-xs font-medium text-[#e09f5a]">
             <Globe2 className="w-3.5 h-3.5" />
-            <span>Мульти-артист бібліотека • {stats.totalArtists} виконавців</span>
+            <span>{t.artistsCountBadge(stats.totalArtists)}</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
-            Мої виконавці та загальний рейтинг
+            {t.hubTitle}
           </h1>
-          <p className="text-sm text-[#9ca3af]">
-            Додавайте улюблені гурти за назвою або посиланням на Spotify, перемикайтеся між їхніми дискографіями та порівнюйте найкращі треки й альбоми в єдиному топі.
-          </p>
+          <p className="text-sm text-[#9ca3af]">{t.hubSubtitle}</p>
         </div>
 
         <button
@@ -128,7 +125,7 @@ export function ArtistsHubPage() {
           className="px-5 py-3 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-white text-sm font-semibold inline-flex items-center gap-2 shadow-lg shadow-[#d95d4e]/25 shrink-0 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          <span>Додати нового виконавця</span>
+          <span>{t.addNewArtist}</span>
         </button>
       </section>
 
@@ -138,18 +135,17 @@ export function ArtistsHubPage() {
           <button
             type="button"
             onClick={() => setToast(null)}
-            className="text-xs text-[#9ca3af] hover:text-white"
+            className="text-xs text-[#9ca3af] hover:text-[#f3efe6]"
           >
-            Закрити
+            {t.close}
           </button>
         </div>
       )}
 
-      {/* Global Stat Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
           <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>Виконавців у базі</span>
+            <span>{t.artistsInDb}</span>
             <Users className="w-4 h-4 text-[#e09f5a]" />
           </div>
           <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#f3efe6] mt-2">
@@ -158,7 +154,7 @@ export function ArtistsHubPage() {
         </div>
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
           <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>Оцінено композицій</span>
+            <span>{t.ratedSongsLabel}</span>
             <Music2 className="w-4 h-4 text-[#5fb38e]" />
           </div>
           <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#5fb38e] mt-2">
@@ -167,7 +163,7 @@ export function ArtistsHubPage() {
         </div>
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
           <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>Оцінено релізів</span>
+            <span>{t.ratedReleasesLabel}</span>
             <Disc3 className="w-4 h-4 text-[#d98c5f]" />
           </div>
           <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#d98c5f] mt-2">
@@ -176,7 +172,7 @@ export function ArtistsHubPage() {
         </div>
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
           <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>Середній бал (усі пісні)</span>
+            <span>{t.avgAllSongs}</span>
             <TrendingUp className="w-4 h-4 text-[#d95d4e]" />
           </div>
           <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#d95d4e] mt-2">
@@ -185,9 +181,8 @@ export function ArtistsHubPage() {
         </div>
       </section>
 
-      {/* Artist Cards Grid */}
       <section className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-[#f3efe6]">Бібліотека виконавців</h2>
+        <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.artistLibrary}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {stats.artistLeaderboard.map((artist) => {
             const isSyncing = syncingArtistId === artist.id;
@@ -214,24 +209,23 @@ export function ArtistsHubPage() {
                       {artist.name}
                     </h3>
                     <div className="mt-1 text-xs text-[#9ca3af] font-mono-num">
-                      {artist.totalReleases} релізів • {artist.totalSongs} пісень
+                      {artist.totalReleases} {t.releasesWord} • {artist.totalSongs} {t.songsWord}
                     </div>
                     <div className="mt-2 flex items-center gap-2 text-xs">
                       <span className="px-2 py-0.5 rounded-md bg-white/[0.05] font-mono-num text-[#e09f5a]">
-                        Пісні: {artist.averageSongRating ?? '—'}
+                        {t.songsBadge} {artist.averageSongRating ?? '—'}
                       </span>
                       <span className="px-2 py-0.5 rounded-md bg-white/[0.05] font-mono-num text-[#5fb38e]">
-                        Альбоми: {artist.averageReleaseRating ?? '—'}
+                        {t.albumsBadge} {artist.averageReleaseRating ?? '—'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs text-[#9ca3af] font-mono-num">
                     <span>
-                      Оцінено {artist.ratedSongs}/{artist.totalSongs}
+                      {t.ratedWord} {artist.ratedSongs}/{artist.totalSongs}
                     </span>
                     <span className="text-[#e09f5a]">{artist.completionPercent}%</span>
                   </div>
@@ -252,24 +246,23 @@ export function ArtistsHubPage() {
                   </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
                   <button
                     type="button"
                     onClick={() => handleOpenArtist(artist.id)}
-                    className="flex-1 h-9 rounded-xl bg-white/[0.06] hover:bg-[#d95d4e] text-xs font-semibold text-[#f3efe6] transition-colors"
+                    className="flex-1 h-9 rounded-xl bg-white/[0.06] hover:bg-[#d95d4e] hover:text-white text-xs font-semibold text-[#f3efe6] transition-colors"
                   >
-                    Відкрити огляд
+                    {t.openOverview}
                   </button>
                   <button
                     type="button"
                     disabled={syncingArtistId !== null}
                     onClick={() => handleSyncArtist(artist.id)}
-                    title="Перевірити нові релізи"
+                    title={t.checkUpdatesTitle}
                     className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-[#d1d5db] inline-flex items-center gap-1.5 disabled:opacity-40"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">Оновити</span>
+                    <span className="hidden sm:inline">{t.refresh}</span>
                   </button>
 
                   {isConfirmingDel ? (
@@ -278,13 +271,13 @@ export function ArtistsHubPage() {
                       onClick={() => handleDeleteArtist(artist.id)}
                       className="h-9 px-3 rounded-xl bg-[#d95d4e] text-white text-xs font-semibold"
                     >
-                      Підтвердити
+                      {t.confirmDelete}
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(artist.id)}
-                      title="Видалити виконавця"
+                      title={t.deleteArtistTitle}
                       className="h-9 w-9 rounded-xl bg-white/[0.04] hover:bg-[#d95d4e]/20 border border-white/10 hover:border-[#d95d4e]/40 text-[#9ca3af] hover:text-[#e87c6f] flex items-center justify-center transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -297,22 +290,19 @@ export function ArtistsHubPage() {
         </div>
       </section>
 
-      {/* Global Cross-Artist Leaderboard */}
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-[#e09f5a]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-              Глобальний крос-артист рейтинг
-            </h2>
+            <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.globalLeaderboard}</h2>
           </div>
 
           <div className="inline-flex rounded-xl bg-[#13151c] p-1 border border-white/[0.08]">
             {(
               [
-                { key: 'songs', label: 'Топ пісень' },
-                { key: 'albums', label: 'Топ альбомів' },
-                { key: 'artists', label: 'Рейтинг виконавців' },
+                { key: 'songs', label: t.tabTopSongs },
+                { key: 'albums', label: t.tabTopAlbums },
+                { key: 'artists', label: t.tabArtistRank },
               ] as const
             ).map((tab) => (
               <button
@@ -335,7 +325,7 @@ export function ArtistsHubPage() {
           <div className="space-y-3">
             {stats.globalTopSongs.length === 0 ? (
               <div className="rounded-2xl bg-[#13151c] border border-dashed border-white/10 p-8 text-center text-sm text-[#9ca3af]">
-                Поки що немає оцінених пісень. Оцініть композиції будь-якого виконавця, щоб побачити загальний топ.
+                {t.noRatedSongsGlobal}
               </div>
             ) : (
               stats.globalTopSongs.map((song, idx) => (
@@ -358,7 +348,7 @@ export function ArtistsHubPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {stats.globalTopAlbums.length === 0 ? (
               <div className="col-span-full rounded-2xl bg-[#13151c] border border-dashed border-white/10 p-8 text-center text-sm text-[#9ca3af]">
-                Поки що немає оцінених альбомів чи релізів.
+                {t.noRatedAlbumsGlobal}
               </div>
             ) : (
               stats.globalTopAlbums.map((rel) => (
@@ -394,22 +384,18 @@ export function ArtistsHubPage() {
                         {a.name}
                       </button>
                       <div className="text-xs text-[#9ca3af] font-mono-num">
-                        Оцінено {a.ratedSongs} пісень • {a.ratedReleases} релізів
+                        {a.ratedSongs} {t.songsWord} • {a.ratedReleases} {t.releasesWord}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 font-mono-num text-sm">
                     <div className="text-right">
-                      <div className="text-[10px] text-[#9ca3af]">Сер. пісні</div>
-                      <div className="font-bold text-[#e09f5a]">
-                        {a.averageSongRating ?? '—'}
-                      </div>
+                      <div className="text-[10px] text-[#9ca3af]">{t.avgSongsCol}</div>
+                      <div className="font-bold text-[#e09f5a]">{a.averageSongRating ?? '—'}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] text-[#9ca3af]">Сер. альбоми</div>
-                      <div className="font-bold text-[#5fb38e]">
-                        {a.averageReleaseRating ?? '—'}
-                      </div>
+                      <div className="text-[10px] text-[#9ca3af]">{t.avgAlbumsCol}</div>
+                      <div className="font-bold text-[#5fb38e]">{a.averageReleaseRating ?? '—'}</div>
                     </div>
                   </div>
                 </div>

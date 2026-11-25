@@ -10,7 +10,7 @@ import { importCatalogData } from './importer.ts';
 import { attachUserMiddleware, createAuthRouter, requireAuth } from './routes/auth.ts';
 import { searchArtistCandidates } from './services/artistSearch.ts';
 import { getJobStatus, startArtistImportJob } from './services/catalogBuilder.ts';
-import { decryptText, encryptText } from './services/security.ts';
+import { createRateLimiter, csrfProtection, decryptText, encryptText } from './services/security.ts';
 import { hasSpotifyCredentials, verifySpotifyCredentials } from './services/spotifyApi.ts';
 import {
   CATEGORIES,
@@ -32,6 +32,8 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
@@ -43,15 +45,38 @@ app.use(
   })
 );
 
+const allowedOrigins = new Set<string>(
+  [
+    process.env.APP_URL?.trim().replace(/\/+$/, ''),
+    ...(process.env.NODE_ENV !== 'production'
+      ? ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001']
+      : []),
+  ].filter((v): v is string => Boolean(v))
+);
+
 app.use(
   cors({
-    origin: true,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin.replace(/\/+$/, ''))) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
   })
 );
 app.use(cookieParser());
-app.use(express.json({ limit: '15mb' }));
+app.use('/api/import', express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '256kb' }));
+app.use('/api', csrfProtection);
 app.use(attachUserMiddleware(getDb));
+
+const importRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+  message: 'Забагато запитів на імпорт або оновлення виконавців. Зачекайте кілька хвилин.',
+});
 
 function parseRatingInput(value: unknown): number | null | 'invalid' {
   if (value === null || value === undefined || value === '') return null;
@@ -298,7 +323,7 @@ app.get('/api/artists/search', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/artists/import', requireAuth, async (req, res) => {
+app.post('/api/artists/import', requireAuth, importRateLimit, async (req, res) => {
   const db = await getDb();
   const { name, spotifyUrl, spotifyId, mbId, deezerId, itunesId, imageUrl, prefs } = req.body || {};
   if (!name && !spotifyUrl && !spotifyId) {
@@ -319,7 +344,7 @@ app.post('/api/artists/import', requireAuth, async (req, res) => {
   res.json({ jobId });
 });
 
-app.post('/api/artists/:id/sync', requireAuth, async (req, res) => {
+app.post('/api/artists/:id/sync', requireAuth, importRateLimit, async (req, res) => {
   const db = await getDb();
   const artistId = Number(req.params.id);
   const exists = await db.get('SELECT 1 FROM user_artists WHERE user_id = ? AND artist_id = ?', [
@@ -909,7 +934,12 @@ app.put('/api/songs/:id/rating', requireAuth, async (req, res) => {
     return;
   }
 
-  const exists = await db.get('SELECT id FROM songs WHERE id = ?', [songId]);
+  const exists = await db.get(
+    `SELECT s.id FROM songs s
+     JOIN user_artists ua ON ua.artist_id = s.artist_id AND ua.user_id = ?
+     WHERE s.id = ?`,
+    [userId, songId]
+  );
   if (!exists) {
     res.status(404).json({ error: 'Композицію не знайдено.' });
     return;
@@ -937,7 +967,12 @@ app.put('/api/songs/:id/note', requireAuth, async (req, res) => {
   const songId = Number(req.params.id);
   const note = typeof req.body?.note === 'string' ? req.body.note : '';
 
-  const exists = await db.get('SELECT id FROM songs WHERE id = ?', [songId]);
+  const exists = await db.get(
+    `SELECT s.id FROM songs s
+     JOIN user_artists ua ON ua.artist_id = s.artist_id AND ua.user_id = ?
+     WHERE s.id = ?`,
+    [userId, songId]
+  );
   if (!exists) {
     res.status(404).json({ error: 'Композицію не знайдено.' });
     return;
@@ -1108,11 +1143,12 @@ app.get('/api/releases/:idOrSlug', requireAuth, async (req, res) => {
       ) AS average_track_rating
     FROM releases r
     JOIN artists a ON a.id = r.artist_id
+    JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?
     LEFT JOIN release_ratings rr ON rr.release_id = r.id AND rr.user_id = ?
     LEFT JOIN notes n ON n.user_id = ? AND n.target_type = 'release' AND n.target_id = r.id
     WHERE ${isNum ? 'r.id = ?' : 'r.slug = ?'}
   `,
-    [userId, userId, userId, userId, isNum ? Number(key) : key]
+    [userId, userId, userId, userId, userId, isNum ? Number(key) : key]
   );
 
   if (!relRow) {
@@ -1177,7 +1213,12 @@ app.put('/api/releases/:id/rating', requireAuth, async (req, res) => {
     return;
   }
 
-  const exists = await db.get('SELECT id FROM releases WHERE id = ?', [releaseId]);
+  const exists = await db.get(
+    `SELECT r.id FROM releases r
+     JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?
+     WHERE r.id = ?`,
+    [userId, releaseId]
+  );
   if (!exists) {
     res.status(404).json({ error: 'Реліз не знайдено.' });
     return;
@@ -1208,7 +1249,12 @@ app.put('/api/releases/:id/note', requireAuth, async (req, res) => {
   const releaseId = Number(req.params.id);
   const note = typeof req.body?.note === 'string' ? req.body.note : '';
 
-  const exists = await db.get('SELECT id FROM releases WHERE id = ?', [releaseId]);
+  const exists = await db.get(
+    `SELECT r.id FROM releases r
+     JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?
+     WHERE r.id = ?`,
+    [userId, releaseId]
+  );
   if (!exists) {
     res.status(404).json({ error: 'Реліз не знайдено.' });
     return;

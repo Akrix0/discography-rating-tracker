@@ -1,25 +1,60 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root,
+  html.dark {
+    color-scheme: dark;
     --bg-canvas: #0b0c10;
     --bg-card: #13151c;
     --bg-elevated: #1a1d27;
-    --text-primary: #f3efe6;
+    --bg-input: #0b0c10;
+    --bg-header: rgba(11, 12, 16, 0.86);
+    --text-main: #f3efe6;
+    --text-soft: #e5e0d5;
     --text-muted: #9ca3af;
+    --text-faint: #6b7280;
+    --border-line: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --surface-hover: rgba(255, 255, 255, 0.06);
+    --scroll-track: #0b0c10;
+    --scroll-thumb: #272b38;
+    --scroll-thumb-hover: #3a4054;
     --accent-crimson: #d95d4e;
     --accent-amber: #e09f5a;
     --accent-sage: #5fb38e;
   }
 
+  html.light {
+    color-scheme: light;
+    --bg-canvas: #f5f3ee;
+    --bg-card: #ffffff;
+    --bg-elevated: #ece8de;
+    --bg-input: #f8f6f2;
+    --bg-header: rgba(245, 243, 238, 0.88);
+    --text-main: #18181b;
+    --text-soft: #27272a;
+    --text-muted: #57534e;
+    --text-faint: #78716c;
+    --border-line: rgba(24, 24, 27, 0.1);
+    --border-strong: rgba(24, 24, 27, 0.2);
+    --surface-hover: rgba(24, 24, 27, 0.055);
+    --scroll-track: #ece8de;
+    --scroll-thumb: #c8c2b4;
+    --scroll-thumb-hover: #a8a090;
+    --accent-crimson: #c94a3b;
+    --accent-amber: #b86d1f;
+    --accent-sage: #25855a;
+  }
+
   body {
     font-family: 'Manrope', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-canvas);
-    color: var(--text-primary);
+    color: var(--text-main);
     background-image:
       radial-gradient(circle at 12% 0%, rgba(217, 93, 78, 0.08), transparent 40%),
       radial-gradient(circle at 88% 12%, rgba(224, 159, 90, 0.06), transparent 36%);
     background-attachment: fixed;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, .font-display {
@@ -33,19 +68,98 @@
   }
 }
 
+/* Light-theme overrides so every dark-coded surface/text/border adapts cleanly */
+html.light .bg-\[\#0b0c10\],
+html.light .bg-\[\#0b0c10\]\/85,
+html.light .bg-\[\#0b0c10\]\/80,
+html.light .bg-\[\#0b0c10\]\/70,
+html.light .bg-\[\#0b0c10\]\/60 {
+  background-color: var(--bg-input) !important;
+}
+
+html.light .bg-\[\#13151c\],
+html.light .bg-\[\#0f1117\] {
+  background-color: var(--bg-card) !important;
+}
+
+html.light .bg-\[\#1a1d27\],
+html.light .hover\:bg-\[\#1a1d27\]:hover,
+html.light .hover\:bg-\[\#151822\]:hover {
+  background-color: var(--bg-elevated) !important;
+}
+
+html.light .from-\[\#171923\] {
+  --tw-gradient-from: #ffffff !important;
+  --tw-gradient-via: #f9f6f0 !important;
+  --tw-gradient-to: #f2ece2 !important;
+}
+
+html.light .text-\[\#f3efe6\],
+html.light .text-\[\#e5e0d5\],
+html.light .text-\[\#d1d5db\] {
+  color: var(--text-main) !important;
+}
+
+html.light .text-\[\#9ca3af\] {
+  color: var(--text-muted) !important;
+}
+
+html.light .text-\[\#6b7280\] {
+  color: var(--text-faint) !important;
+}
+
+html.light .text-\[\#e09f5a\] {
+  color: #b46918 !important;
+}
+
+html.light .text-\[\#5fb38e\],
+html.light .text-\[\#7cc9a7\] {
+  color: #1f7a52 !important;
+}
+
+html.light .border-white\/10,
+html.light .border-white\/12,
+html.light .border-white\/15,
+html.light .border-white\/\[0\.05\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.07\],
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.1\] {
+  border-color: var(--border-line) !important;
+}
+
+html.light .bg-white\/5,
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/10 {
+  background-color: var(--surface-hover) !important;
+}
+
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/10:hover,
+html.light .hover\:bg-white\/\[0\.06\]:hover,
+html.light .hover\:bg-white\/\[0\.08\]:hover,
+html.light .hover\:bg-white\/\[0\.09\]:hover,
+html.light .hover\:bg-white\/\[0\.1\]:hover,
+html.light .hover\:bg-white\/\[0\.11\]:hover {
+  background-color: rgba(24, 24, 27, 0.08) !important;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0c10;
+  background: var(--scroll-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #272b38;
+  background: var(--scroll-thumb);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a4054;
+  background: var(--scroll-thumb-hover);
 }
 
 input[type='range'].rating-slider {
@@ -65,7 +179,7 @@ input[type='range'].rating-slider::-webkit-slider-thumb {
   border-radius: 9999px;
   background: #f3efe6;
   border: 2px solid #d95d4e;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
@@ -80,7 +194,7 @@ input[type='range'].rating-slider::-moz-range-thumb {
   border-radius: 9999px;
   background: #f3efe6;
   border: 2px solid #d95d4e;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   transition: transform 0.15s ease;
 }
 

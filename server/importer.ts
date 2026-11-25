@@ -1,4 +1,5 @@
 import { isReleaseSecondary, isSongSecondary, type Db } from './db.ts';
+import { sanitizeHttpUrl } from './services/security.ts';
 import { CATEGORIES, type Category, type ReleaseType } from './types.ts';
 
 function normalizeText(str: string): string {
@@ -209,7 +210,8 @@ export async function importCatalogData(
     const relSpotifyId = extractSpotifyId(r.release_spotify_url, 'album');
     const relSpotifyUrl = relSpotifyId
       ? `https://open.spotify.com/album/${relSpotifyId}`
-      : r.release_spotify_url || null;
+      : sanitizeHttpUrl(r.release_spotify_url);
+    const safeCoverUrl = sanitizeHttpUrl(r.cover_url);
 
     const relRow = await db.get<{ id: number }>(
       'SELECT id FROM releases WHERE artist_id = ? AND lower(title) = lower(?)',
@@ -238,7 +240,7 @@ export async function importCatalogData(
           relType,
           r.release_date || null,
           relYear,
-          r.cover_url || null,
+          safeCoverUrl,
           relSpotifyId,
           relSpotifyUrl,
           isReleaseSecondary(relCategory, relType),
@@ -257,7 +259,7 @@ export async function importCatalogData(
     const songSpotifyId = extractSpotifyId(r.song_spotify_url, 'track');
     const songSpotifyUrl = songSpotifyId
       ? `https://open.spotify.com/track/${songSpotifyId}`
-      : r.song_spotify_url || null;
+      : sanitizeHttpUrl(r.song_spotify_url);
 
     const songRow = await db.get<{ id: number; spotify_id: string | null }>(
       'SELECT id, spotify_id FROM songs WHERE canonical_key = ?',
@@ -289,7 +291,7 @@ export async function importCatalogData(
           isSongSecondary(songCategory, versionTag),
           releaseId,
           r.duration_ms && !Number.isNaN(r.duration_ms) ? r.duration_ms : null,
-          r.cover_url || null,
+          safeCoverUrl,
           songSpotifyId,
           songSpotifyUrl,
           songSpotifyId ? 1 : 0,

@@ -11,13 +11,16 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
-import { CATEGORY_META, RELEASE_TYPE_LABELS, type ReleaseDetail } from '../types';
+import { usePreferences } from '../context/PreferencesContext';
+import { CATEGORY_LABELS, RELEASE_TYPE_I18N } from '../i18n/translations';
+import { CATEGORY_META, type ReleaseDetail } from '../types';
 import { RatingControl } from '../components/RatingControl';
 import { SongRow } from '../components/SongRow';
 
 export function ReleaseDetailPage() {
   const { idOrSlug } = useParams();
   const { refreshArtists, setSelectedArtistId } = useArtist();
+  const { t, lang, theme } = usePreferences();
   const [release, setRelease] = useState<ReleaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +34,17 @@ export function ReleaseDetailPage() {
       setRelease(data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося завантажити реліз');
+      setError(
+        err instanceof Error
+          ? err.message
+          : lang === 'uk'
+            ? 'Не вдалося завантажити реліз'
+            : 'Failed to load release'
+      );
     } finally {
       setLoading(false);
     }
-  }, [idOrSlug]);
+  }, [idOrSlug, lang]);
 
   useEffect(() => {
     void loadRelease();
@@ -48,15 +57,21 @@ export function ReleaseDetailPage() {
   if (error || !release) {
     return (
       <div className="rounded-2xl bg-[#13151c] border border-[#d95d4e]/40 p-8 text-center space-y-3">
-        <p className="text-[#e87c6f] font-medium">{error || 'Реліз не знайдено'}</p>
+        <p className="text-[#e87c6f] font-medium">
+          {error || (lang === 'uk' ? 'Реліз не знайдено' : 'Release not found')}
+        </p>
         <Link to="/releases" className="text-sm text-[#e09f5a] hover:underline inline-block">
-          ← Повернутися до списку релізів
+          ← {t.allReleasesBack}
         </Link>
       </div>
     );
   }
 
   const catMeta = CATEGORY_META[release.category] || CATEGORY_META.Other;
+  const showVerificationNote =
+    Boolean(release.verification_note) &&
+    !release.spotify_id &&
+    !release.verification_note?.startsWith('Перевірено через');
 
   const handleSongUpdated = (
     songId: number,
@@ -96,14 +111,14 @@ export function ReleaseDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm text-[#9ca3af] hover:text-[#f3efe6] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Усі релізи</span>
+          <span>{t.allReleasesBack}</span>
         </Link>
         <Link
           to="/"
           onClick={() => setSelectedArtistId(release.artist_id)}
           className="text-xs font-semibold text-[#e09f5a] hover:underline"
         >
-          Виконавець: {release.artist_name} →
+          {t.artistLabel} {release.artist_name} →
         </Link>
       </div>
 
@@ -130,10 +145,10 @@ export function ReleaseDetailPage() {
                   {release.artist_name}
                 </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${catMeta.badgeBg}`}>
-                  {release.category}
+                  {CATEGORY_LABELS[lang][release.category] || release.category}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-xs bg-white/[0.06] text-[#d1d5db] border border-white/10">
-                  {RELEASE_TYPE_LABELS[release.release_type] || release.release_type}
+                  {RELEASE_TYPE_I18N[lang][release.release_type] || release.release_type}
                 </span>
               </div>
 
@@ -144,20 +159,20 @@ export function ReleaseDetailPage() {
               <div className="flex flex-wrap items-center gap-4 text-sm text-[#9ca3af]">
                 <span className="inline-flex items-center gap-1.5 font-mono-num">
                   <Calendar className="w-4 h-4 text-[#6b7280]" />
-                  {release.release_date || release.release_year || 'Дата невідома'}
+                  {release.release_date || release.release_year || t.dateUnknown}
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-mono-num">
                   <ListMusic className="w-4 h-4 text-[#6b7280]" />
-                  {release.track_count} композицій ({release.rated_track_count} оцінено)
+                  {t.tracksRatedSummary(release.track_count, release.rated_track_count)}
                 </span>
                 {release.average_track_rating !== null && (
                   <span className="font-mono-num text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
-                    Середній бал треків: <strong className="text-[#f3efe6]">{release.average_track_rating}</strong>
+                    {t.avgTrackScore} <strong className="text-[#f3efe6]">{release.average_track_rating}</strong>
                   </span>
                 )}
               </div>
 
-              {release.verification_note && (
+              {showVerificationNote && (
                 <div className="inline-flex items-center gap-1.5 text-xs text-[#9ca3af] pt-1">
                   <Info className="w-3.5 h-3.5 text-[#e09f5a] shrink-0" />
                   <span>{release.verification_note}</span>
@@ -172,7 +187,7 @@ export function ReleaseDetailPage() {
                     rel="noopener noreferrer"
                     className="px-4 py-2 rounded-xl bg-[#1DB954]/15 hover:bg-[#1DB954]/25 border border-[#1DB954]/40 text-xs sm:text-sm font-semibold text-[#1DB954] inline-flex items-center gap-2 transition-colors"
                   >
-                    <span>Відкрити реліз у Spotify</span>
+                    <span>{t.openReleaseSpotify}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
@@ -183,7 +198,7 @@ export function ReleaseDetailPage() {
                     className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs sm:text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 transition-colors"
                   >
                     <Radio className="w-4 h-4 text-[#e09f5a]" />
-                    <span>{showAlbumPlayer ? 'Сховати плеєр альбому' : 'Spotify-плеєр альбому'}</span>
+                    <span>{showAlbumPlayer ? t.hideAlbumPlayer : t.showAlbumPlayer}</span>
                   </button>
                 )}
               </div>
@@ -192,8 +207,12 @@ export function ReleaseDetailPage() {
             {showAlbumPlayer && release.spotify_id && (
               <div className="rounded-2xl overflow-hidden border border-white/10 bg-[#0b0c10]">
                 <iframe
-                  title={`Spotify альбом: ${release.title}`}
-                  src={`https://open.spotify.com/embed/album/${release.spotify_id}?utm_source=generator&theme=0`}
+                  title={`Spotify: ${release.title}`}
+                  src={
+                    theme === 'dark'
+                      ? `https://open.spotify.com/embed/album/${release.spotify_id}?utm_source=generator&theme=0`
+                      : `https://open.spotify.com/embed/album/${release.spotify_id}?utm_source=generator`
+                  }
                   width="100%"
                   height="352"
                   frameBorder="0"
@@ -205,10 +224,8 @@ export function ReleaseDetailPage() {
 
             <div className="rounded-2xl bg-[#0b0c10]/70 border border-white/[0.08] p-4 sm:p-5 space-y-3">
               <div>
-                <h2 className="text-sm font-bold text-[#f3efe6]">Суб’єктивна оцінка релізу</h2>
-                <p className="text-[11px] text-[#9ca3af]">
-                  Не залежить від середньої оцінки окремих композицій — оцініть реліз як цілісний проєкт.
-                </p>
+                <h2 className="text-sm font-bold text-[#f3efe6]">{t.subjectiveReleaseRating}</h2>
+                <p className="text-[11px] text-[#9ca3af]">{t.subjectiveReleaseRatingSub}</p>
               </div>
 
               <RatingControl
@@ -228,7 +245,7 @@ export function ReleaseDetailPage() {
                   );
                   void refreshArtists();
                 }}
-                notePlaceholder="Загальні враження від альбому або релізу..."
+                notePlaceholder={t.releaseNotePlaceholder}
               />
             </div>
           </div>
@@ -237,7 +254,7 @@ export function ReleaseDetailPage() {
 
       <section className="space-y-4">
         <h2 className="font-display text-xl font-bold text-[#f3efe6]">
-          Список композицій ({release.tracks.length})
+          {t.tracklistTitle(release.tracks.length)}
         </h2>
         <div className="space-y-3">
           {release.tracks.map((track) => (

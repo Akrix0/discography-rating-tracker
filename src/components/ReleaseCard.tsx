@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Disc3, ExternalLink, Calendar, ListMusic } from 'lucide-react';
+import { usePreferences } from '../context/PreferencesContext';
 import { CATEGORY_META, type Release } from '../types';
 
 interface ReleaseCardProps {
@@ -8,11 +9,12 @@ interface ReleaseCardProps {
 }
 
 export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
+  const { t } = usePreferences();
   const catMeta = CATEGORY_META[release.category] || CATEGORY_META.Other;
   const hasRating = release.rating !== null;
 
   return (
-    <div className="group rounded-2xl bg-[#13151c] border border-white/[0.07] hover:border-white/[0.18] overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/40">
+    <div className="group rounded-2xl bg-[#13151c] border border-white/[0.07] hover:border-white/[0.18] overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20">
       <Link to={`/releases/${release.slug}`} className="relative aspect-square bg-[#1a1d27] overflow-hidden block">
         {release.cover_url ? (
           <img
@@ -34,7 +36,7 @@ export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
             </span>
           ) : (
             <span className="px-2 py-1 rounded-lg text-[11px] bg-[#0b0c10]/75 backdrop-blur-md text-[#9ca3af] border border-white/10">
-              Без оцінки
+              {t.unratedBadge}
             </span>
           )}
         </div>
@@ -62,11 +64,11 @@ export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
           <div className="mt-1.5 flex items-center gap-3 text-xs text-[#9ca3af]">
             <span className="inline-flex items-center gap-1 font-mono-num">
               <Calendar className="w-3.5 h-3.5 text-[#6b7280]" />
-              {release.release_date || release.release_year || 'Невідомо'}
+              {release.release_date || release.release_year || t.dateUnknown}
             </span>
             <span className="inline-flex items-center gap-1 font-mono-num">
               <ListMusic className="w-3.5 h-3.5 text-[#6b7280]" />
-              {release.rated_track_count}/{release.track_count} треків
+              {release.rated_track_count}/{release.track_count} {t.tracksShort}
             </span>
           </div>
         </div>
@@ -76,7 +78,7 @@ export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
             to={`/releases/${release.slug}`}
             className="text-xs font-medium text-[#e09f5a] hover:underline"
           >
-            Відкрити реліз →
+            {t.openRelease}
           </Link>
           {release.spotify_url && (
             <a

@@ -19,12 +19,21 @@ import { fetchFullArtistCatalogSpotifyApi, hasSpotifyCredentials } from './spoti
 const UA = 'UniversalDiscographyTracker/2.0 (local-personal-catalog)';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const jobs = new Map<string, ImportJobStatus & { userId: number }>();
+const jobs = new Map<string, ImportJobStatus & { userId: number; updatedAt: number }>();
+
+function pruneOldJobs() {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, j] of jobs.entries()) {
+    if (j.status !== 'running' && j.updatedAt < cutoff) {
+      jobs.delete(id);
+    }
+  }
+}
 
 export function getJobStatus(jobId: string, userId: number): ImportJobStatus | null {
   const j = jobs.get(jobId);
   if (!j || j.userId !== userId) return null;
-  const { userId: _u, ...rest } = j;
+  const { userId: _u, updatedAt: _t, ...rest } = j;
   return rest;
 }
 
@@ -281,6 +290,7 @@ function shouldKeepTrack(songCat: Category, versionTag: string | null, prefs: Im
 }
 
 export function startArtistImportJob(db: Db, req: ArtistImportRequest): string {
+  pruneOldJobs();
   const jobId = crypto.randomUUID();
   const prefs: ImportPreferences = {
     ...DEFAULT_IMPORT_PREFS,
@@ -289,6 +299,7 @@ export function startArtistImportJob(db: Db, req: ArtistImportRequest): string {
 
   jobs.set(jobId, {
     userId: req.userId,
+    updatedAt: Date.now(),
     jobId,
     status: 'running',
     percent: 5,
@@ -309,7 +320,7 @@ async function executeJob(
 ): Promise<void> {
   const updateJob = (patch: Partial<ImportJobStatus>) => {
     const cur = jobs.get(jobId);
-    if (cur) jobs.set(jobId, { ...cur, ...patch });
+    if (cur) jobs.set(jobId, { ...cur, ...patch, updatedAt: Date.now() });
   };
 
   try {

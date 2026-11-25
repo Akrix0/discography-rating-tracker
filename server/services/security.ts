@@ -3,15 +3,23 @@ import type { NextFunction, Request, Response } from 'express';
 
 const DEV_FALLBACK_SECRET = 'local-dev-discography-tracker-encryption-secret-do-not-use-in-prod';
 
-let warnedMissingKey = false;
+// Precompute a valid scrypt hash once at module load for constant-time dummy login checks
+export const DUMMY_SCRYPT_HASH = (() => {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync('dummy-timing-equalizer-password', salt, 64, {
+    N: 16384,
+    r: 8,
+    p: 1,
+  });
+  return `scrypt$${salt}$${derived.toString('hex')}`;
+})();
 
 function getEncryptionKeyBuffer(): Buffer {
   const raw = process.env.ENCRYPTION_KEY?.trim();
-  if (!raw) {
-    if (process.env.NODE_ENV === 'production' && !warnedMissingKey) {
-      warnedMissingKey = true;
-      console.warn(
-        '[SECURITY WARNING] ENCRYPTION_KEY is not set in production! Set a 64-char hex key in environment variables.'
+  if (!raw || raw.length < 32) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[SECURITY FATAL] ENCRYPTION_KEY must be set in production and be at least 32 characters long.'
       );
     }
     return crypto.createHash('sha256').update(DEV_FALLBACK_SECRET).digest();
@@ -82,12 +90,41 @@ export function decryptText(stored: string | null | undefined): string {
   }
 }
 
+export function sanitizeHttpUrl(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return trimmed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function generateSecureToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString('hex');
 }
 
 export function sha256Hex(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+  const method = req.method.toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+    next();
+    return;
+  }
+  const header = req.get('x-requested-with');
+  if (header !== 'DiscographyTracker') {
+    res.status(403).json({ error: 'Запит відхилено перевіркою безпеки (CSRF).' });
+    return;
+  }
+  next();
 }
 
 export function createRateLimiter(opts: {
@@ -97,7 +134,6 @@ export function createRateLimiter(opts: {
 }) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
-  // Periodic cleanup to avoid unbounded memory growth
   const cleanup = setInterval(() => {
     const now = Date.now();
     for (const [k, v] of hits.entries()) {

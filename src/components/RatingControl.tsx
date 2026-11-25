@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Loader2, AlertCircle, X, MessageSquare } from 'lucide-react';
 import { useAutoSave, type SaveStatus } from '../hooks/useAutoSave';
+import { usePreferences } from '../context/PreferencesContext';
 
 interface RatingControlProps {
   rating: number | null;
@@ -34,8 +35,9 @@ export function RatingControl({
   onSaveNote,
   onUpdated,
   compact = false,
-  notePlaceholder = 'Додати нотатку...',
+  notePlaceholder,
 }: RatingControlProps) {
+  const { t, theme } = usePreferences();
   const [rating, setRating] = useState<number | null>(initialRating);
   const [inputValue, setInputValue] = useState<string>(
     initialRating !== null ? String(initialRating) : ''
@@ -101,6 +103,7 @@ export function RatingControl({
 
   const fillPercent = rating !== null ? rating : 0;
   const activeColor = ratingColor(rating);
+  const neutralTrack = theme === 'light' ? 'rgba(24,24,27,0.14)' : 'rgba(255,255,255,0.12)';
 
   return (
     <div className="flex flex-col gap-2.5 w-full">
@@ -111,7 +114,7 @@ export function RatingControl({
             min={0}
             max={100}
             step={1}
-            aria-label="Оцінка від 0 до 100"
+            aria-label="Rating 0-100"
             value={rating !== null ? rating : 50}
             onChange={(e) => handleSliderChange(e.target.value)}
             onMouseUp={() => ratingSaver.flushSave()}
@@ -120,8 +123,8 @@ export function RatingControl({
             style={{
               background:
                 rating !== null
-                  ? `linear-gradient(to right, ${activeColor} 0%, ${activeColor} ${fillPercent}%, rgba(255,255,255,0.12) ${fillPercent}%, rgba(255,255,255,0.12) 100%)`
-                  : 'rgba(255,255,255,0.1)',
+                  ? `linear-gradient(to right, ${activeColor} 0%, ${activeColor} ${fillPercent}%, ${neutralTrack} ${fillPercent}%, ${neutralTrack} 100%)`
+                  : neutralTrack,
             }}
           />
         </div>
@@ -133,7 +136,7 @@ export function RatingControl({
               min={0}
               max={100}
               step={1}
-              aria-label="Числове поле оцінки"
+              aria-label="Numeric rating"
               placeholder="—"
               value={inputValue}
               onChange={(e) => handleNumberChange(e.target.value)}
@@ -152,7 +155,7 @@ export function RatingControl({
             <button
               type="button"
               onClick={handleClearRating}
-              title="Скинути оцінку (зробити неоціненою)"
+              title={t.clearRatingTitle}
               className="w-7 h-7 rounded-md flex items-center justify-center text-[#6b7280] hover:text-[#f3efe6] hover:bg-white/10 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
@@ -164,13 +167,13 @@ export function RatingControl({
           {combinedStatus === 'saving' && (
             <span className="inline-flex items-center gap-1.5 text-[#e09f5a]">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Saving…</span>
+              <span>{t.savingText}</span>
             </span>
           )}
           {combinedStatus === 'saved' && (
             <span className="inline-flex items-center gap-1 text-[#5fb38e]">
               <Check className="w-3.5 h-3.5" />
-              <span>Saved</span>
+              <span>{t.savedText}</span>
             </span>
           )}
           {combinedStatus === 'error' && (
@@ -181,15 +184,15 @@ export function RatingControl({
                 if (noteSaver.status === 'error') noteSaver.retry();
               }}
               className="inline-flex items-center gap-1 text-[#d95d4e] hover:underline"
-              title={ratingSaver.errorMessage || noteSaver.errorMessage || 'Помилка збереження'}
+              title={ratingSaver.errorMessage || noteSaver.errorMessage || t.errorText}
             >
               <AlertCircle className="w-3.5 h-3.5" />
-              <span>Error</span>
+              <span>{t.errorText}</span>
             </button>
           )}
           {combinedStatus === 'idle' && (
             <span className="text-[11px] text-[#6b7280]">
-              {rating === null ? 'Неоцінено' : 'Автозбереження'}
+              {rating === null ? t.unratedText : t.autoSaveText}
             </span>
           )}
         </div>
@@ -200,7 +203,7 @@ export function RatingControl({
         <textarea
           rows={compact ? 1 : 2}
           value={note}
-          placeholder={notePlaceholder}
+          placeholder={notePlaceholder || t.songNotePlaceholder}
           onChange={(e) => handleNoteChange(e.target.value)}
           onBlur={() => noteSaver.flushSave()}
           className="w-full resize-y min-h-[34px] rounded-lg bg-[#0b0c10]/70 border border-white/[0.08] px-3 py-1.5 text-xs sm:text-sm text-[#e5e0d5] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]/50 transition-colors"

@@ -7,12 +7,12 @@ import {
   KeyRound,
   FileSpreadsheet,
   Loader2,
-  ShieldCheck,
   UserCheck,
 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 
 const SAMPLE_CSV = `release_title,release_category,release_type,release_date,release_spotify_url,song_title,version_tag,duration_ms,song_spotify_url
 Demo Single,Singles,single,2026-01-01,,New Bonus Song,,195000,`;
@@ -41,6 +41,7 @@ const SAMPLE_JSON = JSON.stringify(
 export function SettingsDataPage() {
   const { artists, selectedArtistId, refreshArtists } = useArtist();
   const { user, refreshMe } = useAuth();
+  const { t, lang } = usePreferences();
   const [targetArtistId, setTargetArtistId] = useState<number>(
     selectedArtistId || artists[0]?.id || 1
   );
@@ -163,7 +164,11 @@ export function SettingsDataPage() {
     a.download = `discography-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setBackupMsg('Повну резервну копію оцінок і нотаток усіх виконавців збережено у файл.');
+    setBackupMsg(
+      lang === 'uk'
+        ? 'Резервну копію оцінок і нотаток усіх виконавців збережено у файл.'
+        : 'Ratings and notes backup downloaded as JSON.'
+    );
   };
 
   const handleRestoreBackup = (file: File | undefined) => {
@@ -173,10 +178,20 @@ export function SettingsDataPage() {
       try {
         const parsed = JSON.parse(String(reader.result));
         const res = await api.importUserData(parsed);
-        setBackupMsg(`Відновлено оцінок: ${res.restoredRatings}, нотаток: ${res.restoredNotes}.`);
+        setBackupMsg(
+          lang === 'uk'
+            ? `Відновлено оцінок: ${res.restoredRatings}, нотаток: ${res.restoredNotes}.`
+            : `Restored ratings: ${res.restoredRatings}, notes: ${res.restoredNotes}.`
+        );
         await refreshArtists();
       } catch (err) {
-        setBackupMsg(err instanceof Error ? err.message : 'Не вдалося прочитати файл');
+        setBackupMsg(
+          err instanceof Error
+            ? err.message
+            : lang === 'uk'
+              ? 'Не вдалося прочитати файл'
+              : 'Failed to read backup file'
+        );
       }
     };
     reader.readAsText(file);
@@ -186,20 +201,28 @@ export function SettingsDataPage() {
     e.preventDefault();
     setSavingProfile(true);
     setProfileMsg(null);
+    const emailChanged =
+      accountEmail.trim().toLowerCase() !== (user?.email || '').trim().toLowerCase();
     try {
       await api.updateProfile({
         displayName,
         email: accountEmail,
-        ...(newPassword ? { currentPassword, newPassword } : {}),
+        ...(newPassword || emailChanged ? { currentPassword } : {}),
+        ...(newPassword ? { newPassword } : {}),
       });
       await refreshMe();
       setCurrentPassword('');
       setNewPassword('');
-      setProfileMsg({ type: 'ok', text: 'Налаштування акаунту та безпеки оновлено.' });
+      setProfileMsg({ type: 'ok', text: t.profileUpdated });
     } catch (err) {
       setProfileMsg({
         type: 'err',
-        text: err instanceof Error ? err.message : 'Не вдалося оновити профіль',
+        text:
+          err instanceof Error
+            ? err.message
+            : lang === 'uk'
+              ? 'Не вдалося оновити профіль'
+              : 'Failed to update profile',
       });
     } finally {
       setSavingProfile(false);
@@ -210,11 +233,9 @@ export function SettingsDataPage() {
     <div className="space-y-8 max-w-4xl">
       <div>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
-          Акаунт, безпека та дані
+          {t.settingsTitle}
         </h1>
-        <p className="text-sm text-[#9ca3af] mt-1">
-          Керуйте вашим профілем, прив’язкою пошти, ключами Spotify Web API та резервними копіями.
-        </p>
+        <p className="text-sm text-[#9ca3af] mt-1">{t.settingsSub}</p>
       </div>
 
       {/* Account & Security */}
@@ -222,19 +243,13 @@ export function SettingsDataPage() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <UserCheck className="w-5 h-5 text-[#e09f5a]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">Акаунт і безпека</h2>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap text-xs">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#5fb38e]/15 text-[#7cc9a7] border border-[#5fb38e]/30">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              AES-256-GCM шифрування
-            </span>
+            <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.accountSectionTitle}</h2>
           </div>
         </div>
 
         <form onSubmit={handleSaveProfile} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-[#9ca3af] mb-1">Ім’я / нікнейм</label>
+            <label className="block text-xs text-[#9ca3af] mb-1">{t.displayNameField}</label>
             <input
               type="text"
               value={displayName}
@@ -243,7 +258,7 @@ export function SettingsDataPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-[#9ca3af] mb-1">Електронна пошта</label>
+            <label className="block text-xs text-[#9ca3af] mb-1">{t.emailField}</label>
             <input
               type="email"
               value={accountEmail}
@@ -253,9 +268,7 @@ export function SettingsDataPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-[#9ca3af] mb-1">
-              Поточний пароль (якщо змінюєте пароль)
-            </label>
+            <label className="block text-xs text-[#9ca3af] mb-1">{t.currentPassField}</label>
             <input
               type="password"
               value={currentPassword}
@@ -266,14 +279,12 @@ export function SettingsDataPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-[#9ca3af] mb-1">
-              Новий пароль (мін. 8 символів, залиште порожнім щоб не змінювати)
-            </label>
+            <label className="block text-xs text-[#9ca3af] mb-1">{t.newPassField}</label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Новий пароль"
+              placeholder={t.newPassPlaceholder}
               className="w-full h-10 px-3 rounded-xl bg-[#0b0c10] border border-white/10 text-sm text-[#f3efe6] focus:outline-none focus:border-[#e09f5a]"
             />
           </div>
@@ -285,7 +296,7 @@ export function SettingsDataPage() {
               className="px-4 py-2 rounded-xl bg-[#e09f5a] hover:bg-[#d18f49] disabled:opacity-50 text-[#0b0c10] text-sm font-bold inline-flex items-center gap-2 transition-colors"
             >
               {savingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Зберегти профіль</span>
+              <span>{t.saveProfileBtn}</span>
             </button>
           </div>
         </form>
@@ -312,7 +323,7 @@ export function SettingsDataPage() {
           <div className="flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-[#1DB954]" />
             <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-              Spotify Web API (опціонально)
+              {t.spotifySectionTitle}
             </h2>
           </div>
           <span
@@ -322,29 +333,25 @@ export function SettingsDataPage() {
                 : 'bg-white/5 text-[#9ca3af] border-white/10'
             }`}
           >
-            {hasSpotifyApi ? `Підключено (${maskedCid})` : 'Автономний режим (без ключів)'}
+            {hasSpotifyApi ? t.spotifyConnected(maskedCid || '') : t.spotifyOfflineMode}
           </span>
         </div>
 
-        <p className="text-sm text-[#9ca3af] leading-relaxed">
-          Застосунок працює одразу без ключів через публічні дані та вбудовані плеєри. Проте якщо ви хочете отримувати{' '}
-          <strong className="text-[#f3efe6]">100% усіх альбомів, синглів і Spotify-плеєрів</strong> для будь-яких, навіть нішевих або українських виконавців:
-        </p>
+        <p className="text-sm text-[#9ca3af] leading-relaxed">{t.spotifyApiDesc}</p>
         <ol className="text-xs text-[#9ca3af] list-decimal list-inside space-y-1 bg-[#0b0c10]/60 rounded-xl p-3.5 border border-white/[0.06]">
           <li>
-            Відкрийте{' '}
             <a
               href="https://developer.spotify.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#1DB954] hover:underline"
+              className="text-[#1DB954] hover:underline mr-1"
             >
               developer.spotify.com/dashboard
-            </a>{' '}
-            і натисніть <strong>Create app</strong> (Redirect URI можна вказати <code>http://localhost:5173</code>).
+            </a>
+            — {t.spotifyStep1}
           </li>
-          <li>Скопіюйте <strong>Client ID</strong> та <strong>Client secret</strong> у форму нижче.</li>
-          <li>Натисніть «Перевірити та зберегти» — після цього для вже доданих гуртів можна натиснути «Перевірити нові релізи».</li>
+          <li>{t.spotifyStep2}</li>
+          <li>{t.spotifyStep3}</li>
         </ol>
 
         <form onSubmit={handleSaveSpotify} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -369,7 +376,7 @@ export function SettingsDataPage() {
               className="px-4 py-2 rounded-xl bg-[#1DB954] hover:bg-[#1aa34a] disabled:opacity-40 text-[#0b0c10] text-sm font-bold inline-flex items-center gap-2 transition-colors"
             >
               {savingSpotify && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Перевірити та зберегти ключі</span>
+              <span>{t.verifySaveKeys}</span>
             </button>
             {hasSpotifyApi && (
               <button
@@ -377,7 +384,7 @@ export function SettingsDataPage() {
                 onClick={handleClearSpotify}
                 className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs text-[#d1d5db]"
               >
-                Очистити ключі
+                {t.clearKeys}
               </button>
             )}
           </div>
@@ -403,13 +410,9 @@ export function SettingsDataPage() {
       <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-5 sm:p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Download className="w-5 h-5 text-[#5fb38e]" />
-          <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-            Резервна копія оцінок і нотаток
-          </h2>
+          <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.backupTitle}</h2>
         </div>
-        <p className="text-sm text-[#9ca3af]">
-          Усі дані зберігаються локально у файлі <code className="text-[#e09f5a]">data/tracker.sqlite</code>. Ви можете експортувати або відновити оцінки по всіх виконавцях одним JSON-файлом.
-        </p>
+        <p className="text-sm text-[#9ca3af]">{t.backupDesc}</p>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -417,12 +420,12 @@ export function SettingsDataPage() {
             className="px-4 py-2 rounded-xl bg-[#5fb38e]/15 hover:bg-[#5fb38e]/25 border border-[#5fb38e]/40 text-sm font-medium text-[#7cc9a7] inline-flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
-            Експортувати оцінки (JSON)
+            {t.exportJson}
           </button>
 
           <label className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 cursor-pointer">
             <Upload className="w-4 h-4" />
-            <span>Відновити з JSON</span>
+            <span>{t.restoreJson}</span>
             <input
               type="file"
               accept=".json"
@@ -439,14 +442,12 @@ export function SettingsDataPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-[#e09f5a]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-              Ручний імпорт треків (JSON / CSV)
-            </h2>
+            <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.manualImportTitle}</h2>
           </div>
 
           <div className="flex items-center gap-2">
             <select
-              aria-label="Виконавець для імпорту"
+              aria-label={t.artistLabel}
               value={targetArtistId}
               onChange={(e) => setTargetArtistId(Number(e.target.value))}
               className="h-8 px-2.5 rounded-lg bg-[#0b0c10] border border-white/10 text-xs text-[#f3efe6]"
@@ -478,7 +479,7 @@ export function SettingsDataPage() {
         <div className="flex flex-wrap items-center gap-3 text-xs">
           <label className="px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-[#f3efe6] cursor-pointer inline-flex items-center gap-1.5">
             <Upload className="w-3.5 h-3.5" />
-            <span>Завантажити файл (.json / .csv)</span>
+            <span>{t.uploadFile}</span>
             <input
               type="file"
               accept=".json,.csv"
@@ -491,7 +492,7 @@ export function SettingsDataPage() {
             onClick={() => setRawInput(format === 'csv' ? SAMPLE_CSV : SAMPLE_JSON)}
             className="text-[#e09f5a] hover:underline"
           >
-            Вставити приклад {format.toUpperCase()}
+            {t.insertSample(format.toUpperCase())}
           </button>
         </div>
 
@@ -513,7 +514,7 @@ export function SettingsDataPage() {
           disabled={!rawInput.trim()}
           className="px-5 py-2.5 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] disabled:opacity-40 text-sm font-semibold text-white transition-colors"
         >
-          Імпортувати до каталогу виконавця
+          {t.importToArtistBtn}
         </button>
 
         {importResult && (

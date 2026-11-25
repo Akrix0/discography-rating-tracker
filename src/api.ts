@@ -16,7 +16,11 @@ import type {
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'DiscographyTracker',
+      ...(init?.headers || {}),
+    },
     ...init,
   });
   const data = await res.json().catch(() => ({}));

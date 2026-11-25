@@ -15,11 +15,14 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
-import { CATEGORY_META, type StatsResponse } from '../types';
+import { usePreferences } from '../context/PreferencesContext';
+import { CATEGORY_LABELS } from '../i18n/translations';
+import { type StatsResponse } from '../types';
 import { SongRow } from '../components/SongRow';
 
 export function ArtistDashboardPage() {
   const { selectedArtist, selectedArtistId, refreshArtists } = useArtist();
+  const { lang, t } = usePreferences();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +38,6 @@ export function ArtistDashboardPage() {
             prev
               ? {
                   ...data,
-                  // Keep current quick-rating cards mounted while user adjusts slider or types a note
                   nextUnratedSongs: prev.nextUnratedSongs,
                 }
               : data
@@ -46,13 +48,13 @@ export function ArtistDashboardPage() {
         setError(null);
       } catch (err) {
         if (!silent) {
-          setError(err instanceof Error ? err.message : 'Не вдалося завантажити статистику');
+          setError(err instanceof Error ? err.message : t.authFallbackError);
         }
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [selectedArtistId]
+    [selectedArtistId, t.authFallbackError]
   );
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export function ArtistDashboardPage() {
 
   const handleSync = async () => {
     if (!selectedArtist) return;
-    setSyncStage('Перевірка нових релізів…');
+    setSyncStage('…');
     try {
       const { jobId } = await api.syncArtist(selectedArtist.id);
       const timer = window.setInterval(async () => {
@@ -96,11 +98,11 @@ export function ArtistDashboardPage() {
             window.clearInterval(timer);
             setSyncStage(
               st.status === 'completed'
-                ? `Готово: +${st.addedReleases} релізів, +${st.addedSongs} пісень`
-                : `Помилка: ${st.error}`
+                ? `+${st.addedReleases} / +${st.addedSongs}`
+                : `${t.errorText}: ${st.error}`
             );
             await refreshArtists();
-            await loadStats();
+            await loadStats(true);
             window.setTimeout(() => setSyncStage(null), 4000);
           }
         } catch {
@@ -108,7 +110,7 @@ export function ArtistDashboardPage() {
         }
       }, 600);
     } catch (err) {
-      setSyncStage(err instanceof Error ? err.message : 'Помилка оновлення');
+      setSyncStage(err instanceof Error ? err.message : t.errorText);
     }
   };
 
@@ -128,44 +130,44 @@ export function ArtistDashboardPage() {
   if (error || !stats) {
     return (
       <div className="rounded-2xl bg-[#13151c] border border-[#d95d4e]/40 p-6 text-center">
-        <p className="text-[#e87c6f] font-medium">{error || 'Помилка завантаження'}</p>
+        <p className="text-[#e87c6f] font-medium">{error || t.errorText}</p>
       </div>
     );
   }
 
   const cards = [
     {
-      label: 'Усього композицій',
+      label: t.totalSongsCard,
       value: stats.totalSongs,
-      sub: 'Унікальних треків та версій',
+      sub: t.uniqueTracksSub,
       icon: Music2,
       accent: 'text-[#f3efe6]',
     },
     {
-      label: 'Оцінено композицій',
+      label: t.ratedSongsLabel,
       value: stats.ratedSongs,
-      sub: `Залишилось ${Math.max(0, stats.totalSongs - stats.ratedSongs)}`,
+      sub: t.leftToRateSub(Math.max(0, stats.totalSongs - stats.ratedSongs)),
       icon: Sparkles,
       accent: 'text-[#e09f5a]',
     },
     {
-      label: 'Прогрес оцінювання',
+      label: t.ratingProgressCard,
       value: `${stats.completionPercent}%`,
-      sub: 'Завершення каталогу',
+      sub: t.catalogCompletionSub,
       icon: Percent,
       accent: 'text-[#5fb38e]',
     },
     {
-      label: 'Оцінено релізів',
+      label: t.ratedReleasesLabel,
       value: `${stats.ratedReleases}/${stats.totalReleases}`,
-      sub: 'Окремі суб’єктивні оцінки',
+      sub: t.separateSubjectiveSub,
       icon: Disc3,
       accent: 'text-[#d98c5f]',
     },
     {
-      label: 'Середня оцінка пісень',
+      label: t.avgSongScoreCard,
       value: stats.averageSongRating !== null ? stats.averageSongRating : '—',
-      sub: stats.averageSongRating !== null ? 'Балів зі 100' : 'Поки без оцінок',
+      sub: stats.averageSongRating !== null ? t.outOf100Sub : t.noRatingsYetSub,
       icon: TrendingUp,
       accent: 'text-[#d95d4e]',
     },
@@ -173,7 +175,6 @@ export function ArtistDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Hero Banner */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-6 sm:p-8">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-5 max-w-2xl">
@@ -184,33 +185,32 @@ export function ArtistDashboardPage() {
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border border-white/15 shadow-2xl shrink-0"
               />
             )}
-            <div className="space-y-2.5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d95d4e]/15 border border-[#d95d4e]/30 text-xs font-medium text-[#e87c6f]">
-                <span>Особистий музичний архів • SQLite</span>
-              </div>
+            <div className="space-y-3">
               <h1 className="font-display text-2xl sm:text-4xl font-bold text-[#f3efe6] leading-tight">
                 {selectedArtist ? (
                   <>
-                    Дискографія <span className="text-[#e09f5a]">{selectedArtist.name}</span>
+                    {lang === 'uk' ? 'Дискографія ' : ''}
+                    <span className="text-[#e09f5a]">{selectedArtist.name}</span>
+                    {lang === 'en' ? ' Discography' : ''}
                   </>
                 ) : (
-                  'Загальний огляд усіх виконавців'
+                  t.overviewAllArtists
                 )}
               </h1>
               <div className="pt-1 flex flex-wrap items-center gap-2.5">
                 <Link
                   to="/songs"
-                  className="px-4 py-2 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-[#f3efe6] text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-lg shadow-[#d95d4e]/25"
+                  className="px-4 py-2 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-lg shadow-[#d95d4e]/25"
                 >
                   <Play className="w-4 h-4 fill-current" />
-                  <span>Оцінювати пісні</span>
+                  <span>{t.rateSongsBtn}</span>
                 </Link>
                 <Link
                   to="/releases"
                   className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.11] border border-white/10 text-[#f3efe6] text-xs sm:text-sm font-medium inline-flex items-center gap-2 transition-colors"
                 >
                   <Disc3 className="w-4 h-4" />
-                  <span>Релізи ({stats.totalReleases})</span>
+                  <span>{t.releasesBtn(stats.totalReleases)}</span>
                 </Link>
                 {selectedArtist && (
                   <button
@@ -223,7 +223,7 @@ export function ArtistDashboardPage() {
                     ) : (
                       <RefreshCw className="w-3.5 h-3.5" />
                     )}
-                    <span>Перевірити нові релізи</span>
+                    <span>{t.checkNewReleases}</span>
                   </button>
                 )}
                 {selectedArtist?.spotify_url && (
@@ -244,7 +244,7 @@ export function ArtistDashboardPage() {
 
           <div className="shrink-0 w-full lg:w-64 rounded-2xl bg-[#0b0c10]/70 border border-white/[0.08] p-5 space-y-3">
             <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-              <span>Загальний прогрес</span>
+              <span>{t.overallProgress}</span>
               <span className="font-mono-num text-[#e09f5a] font-bold">
                 {stats.completionPercent}%
               </span>
@@ -256,14 +256,15 @@ export function ArtistDashboardPage() {
               />
             </div>
             <div className="text-xs text-[#9ca3af] flex justify-between font-mono-num">
-              <span>{stats.ratedSongs} оцінено</span>
-              <span>{stats.totalSongs} всього</span>
+              <span>
+                {stats.ratedSongs} {t.ratedWord.toLowerCase()}
+              </span>
+              <span>{t.totalOf(stats.totalSongs)}</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stat Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {cards.map((c) => {
           const Icon = c.icon;
@@ -287,18 +288,16 @@ export function ArtistDashboardPage() {
         })}
       </section>
 
-      {/* Category Breakdown */}
       <section className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-[#f3efe6]">Категорії дискографії</h2>
+          <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.categoriesTitle}</h2>
           <Link to="/songs" className="text-xs text-[#e09f5a] hover:underline inline-flex items-center gap-1">
-            Усі композиції <ArrowRight className="w-3.5 h-3.5" />
+            {t.allSongsLink} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {stats.categoryBreakdown.map((item) => {
-            const meta = CATEGORY_META[item.category] || CATEGORY_META.Other;
             const pct = item.total > 0 ? Math.round((item.rated / item.total) * 100) : 0;
             return (
               <Link
@@ -311,14 +310,18 @@ export function ArtistDashboardPage() {
                     <div className="text-sm font-semibold text-[#f3efe6] group-hover:text-[#e09f5a] transition-colors">
                       {item.category}
                     </div>
-                    <div className="text-[11px] text-[#6b7280]">{meta.ukLabel}</div>
+                    <div className="text-[11px] text-[#6b7280]">
+                      {CATEGORY_LABELS[lang][item.category]}
+                    </div>
                   </div>
                   <div className="text-right font-mono-num">
                     <div className="text-xs text-[#f3efe6]">
                       {item.rated}/{item.total}
                     </div>
                     {item.avgRating !== null && (
-                      <div className="text-[11px] text-[#5fb38e]">сер. {item.avgRating}</div>
+                      <div className="text-[11px] text-[#5fb38e]">
+                        {t.avgShort} {item.avgRating}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -334,27 +337,24 @@ export function ArtistDashboardPage() {
         </div>
       </section>
 
-      {/* Top Songs & Top Albums */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Award className="w-5 h-5 text-[#e09f5a]" />
-              <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-                Найвище оцінені пісні
-              </h2>
+              <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.topSongsTitle}</h2>
             </div>
             <Link
               to="/songs?sortBy=rating&sortDir=desc&ratedStatus=rated"
               className="text-xs text-[#e09f5a] hover:underline"
             >
-              Дивитись усі →
+              {t.viewAll}
             </Link>
           </div>
 
           {stats.topSongs.length === 0 ? (
             <div className="rounded-xl bg-[#0b0c10]/60 border border-dashed border-white/10 p-6 text-center text-sm text-[#9ca3af]">
-              Ви ще не оцінили жодної пісні цього виконавця.
+              {t.noArtistRatedSongs}
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -399,21 +399,19 @@ export function ArtistDashboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Disc3 className="w-5 h-5 text-[#d95d4e]" />
-              <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-                Найкраще оцінені альбоми
-              </h2>
+              <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.topAlbumsTitle}</h2>
             </div>
             <Link
               to="/releases?sortBy=rating&sortDir=desc&ratedStatus=rated"
               className="text-xs text-[#e09f5a] hover:underline"
             >
-              Дивитись усі →
+              {t.viewAll}
             </Link>
           </div>
 
           {stats.topAlbums.length === 0 ? (
             <div className="rounded-xl bg-[#0b0c10]/60 border border-dashed border-white/10 p-6 text-center text-sm text-[#9ca3af]">
-              Поки що немає оцінених альбомів чи релізів.
+              {t.noArtistRatedAlbums}
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -455,15 +453,11 @@ export function ArtistDashboardPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-display text-lg font-bold text-[#f3efe6]">
-                Швидке оцінювання
-              </h2>
-              <p className="text-xs text-[#9ca3af]">
-                Кілька неоцінених композицій — почніть прямо тут
-              </p>
+              <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.quickRatingTitle}</h2>
+              <p className="text-xs text-[#9ca3af]">{t.quickRatingSub}</p>
             </div>
             <Link to="/songs?ratedStatus=unrated" className="text-xs text-[#e09f5a] hover:underline">
-              Усі неоцінені →
+              {t.allUnratedLink}
             </Link>
           </div>
           <div className="space-y-3">

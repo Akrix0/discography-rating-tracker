@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2, Music2 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
+import { usePreferences } from '../context/PreferencesContext';
 import {
   CATEGORIES,
   type Category,
@@ -21,6 +22,7 @@ import {
 
 export function SongsPage() {
   const { selectedArtistId, selectedArtist, refreshArtists } = useArtist();
+  const { t } = usePreferences();
   const [searchParams, setSearchParams] = useSearchParams();
   const [meta, setMeta] = useState<FilterMetaResponse | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
@@ -139,25 +141,23 @@ export function SongsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
-            {selectedArtist ? `Композиції: ${selectedArtist.name}` : 'Усі композиції бібліотеки'}
+            {selectedArtist ? t.songsOf(selectedArtist.name) : t.allLibrarySongs}
           </h1>
-          <p className="text-sm text-[#9ca3af] mt-1">
-            Оцінка спільної пісні синхронізується між синглом і альбомом. Використовуйте тумблер нижче, щоб приховати Sped Up / Slowed / Live / Ремікси.
-          </p>
+          <p className="text-sm text-[#9ca3af] mt-1">{t.songsPageSub}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-[#9ca3af]">
           {isRefreshing && (
             <span className="inline-flex items-center gap-1.5 text-[#e09f5a]">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Оновлення…</span>
+              <span>{t.updating}</span>
             </span>
           )}
 
           <div className="flex items-center gap-1.5">
-            <span>Плеєри:</span>
+            <span>{t.playersMode}</span>
             <select
-              aria-label="Режим завантаження Spotify плеєрів"
+              aria-label={t.playersMode}
               value={embedMode}
               onChange={(e) => {
                 const next = e.target.value as EmbedLoadMode;
@@ -166,15 +166,15 @@ export function SongsPage() {
               }}
               className="h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[#f3efe6]"
             >
-              <option value="auto">Авто (плавно)</option>
-              <option value="click">По кліку</option>
+              <option value="auto">{t.modeAuto}</option>
+              <option value="click">{t.modeClick}</option>
             </select>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span>На сторінці:</span>
+            <span>{t.perPage}</span>
             <select
-              aria-label="Кількість пісень на сторінці"
+              aria-label={t.perPage}
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
@@ -214,18 +214,14 @@ export function SongsPage() {
       ) : visibleSongs.length === 0 ? (
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-12 text-center space-y-3">
           <Music2 className="w-10 h-10 text-[#4b5563] mx-auto" />
-          <div className="text-base font-medium text-[#f3efe6]">
-            За вашими фільтрами нічого не знайдено
-          </div>
-          <p className="text-sm text-[#9ca3af]">
-            Спробуйте змінити пошуковий запит або скинути активні фільтри.
-          </p>
+          <div className="text-base font-medium text-[#f3efe6]">{t.nothingFound}</div>
+          <p className="text-sm text-[#9ca3af]">{t.nothingFoundSub}</p>
           <button
             type="button"
             onClick={handleReset}
             className="px-4 py-2 rounded-xl bg-[#d95d4e] text-white text-sm font-medium hover:bg-[#c84d3e] transition-colors"
           >
-            Скинути всі фільтри
+            {t.resetAllFilters}
           </button>
         </div>
       ) : (
@@ -244,7 +240,7 @@ export function SongsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <div className="text-xs text-[#9ca3af] font-mono-num">
-            Показано {startIdx + 1}–{Math.min(startIdx + pageSize, songs.length)} із {songs.length}
+            {t.shownRange(startIdx + 1, Math.min(startIdx + pageSize, songs.length), songs.length)}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -256,7 +252,7 @@ export function SongsPage() {
               }}
               className="h-9 px-3 rounded-lg bg-[#13151c] border border-white/10 text-sm text-[#f3efe6] disabled:opacity-40 inline-flex items-center gap-1 hover:bg-white/5"
             >
-              <ChevronLeft className="w-4 h-4" /> Назад
+              <ChevronLeft className="w-4 h-4" /> {t.prev}
             </button>
             <span className="font-mono-num text-xs text-[#9ca3af] px-2">
               {safePage} / {totalPages}
@@ -270,7 +266,7 @@ export function SongsPage() {
               }}
               className="h-9 px-3 rounded-lg bg-[#13151c] border border-white/10 text-sm text-[#f3efe6] disabled:opacity-40 inline-flex items-center gap-1 hover:bg-white/5"
             >
-              Далі <ChevronRight className="w-4 h-4" />
+              {t.next} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>

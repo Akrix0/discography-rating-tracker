@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { ExternalLink, Loader2, Music, Play } from 'lucide-react';
+import { usePreferences } from '../context/PreferencesContext';
 
 export type EmbedLoadMode = 'auto' | 'click';
 const EMBED_MODE_KEY = 'discography_embed_mode';
@@ -22,7 +23,6 @@ export function setEmbedLoadMode(mode: EmbedLoadMode): void {
   window.dispatchEvent(new CustomEvent(EMBED_MODE_EVENT, { detail: mode }));
 }
 
-// Module-level concurrency queue: at most 2 Spotify iframes hydrate simultaneously
 const MAX_CONCURRENT = 2;
 let activeCount = 0;
 type QueueEntry = { run: (releaseSlot: () => void) => void; cancelled: boolean };
@@ -40,7 +40,6 @@ function pumpQueue() {
       activeCount = Math.max(0, activeCount - 1);
       pumpQueue();
     };
-    // Safety timeout so a slow network frame never stalls the queue
     window.setTimeout(releaseSlot, 2800);
     next.run(releaseSlot);
   }
@@ -72,6 +71,7 @@ function SpotifyEmbedInner({
   verificationNote,
   height = 80,
 }: SpotifyEmbedProps) {
+  const { t, theme } = usePreferences();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const releaseSlotRef = useRef<(() => void) | null>(null);
   const [embedMode, setEmbedModeState] = useState<EmbedLoadMode>(getEmbedLoadMode);
@@ -88,7 +88,6 @@ function SpotifyEmbedInner({
     return () => window.removeEventListener(EMBED_MODE_EVENT, onModeChange);
   }, []);
 
-  // Reset only if spotifyId itself changes
   useEffect(() => {
     setShouldMountIframe(false);
     setIframeLoaded(false);
@@ -113,7 +112,6 @@ function SpotifyEmbedInner({
         const isVisible = entries.some((entry) => entry.isIntersecting);
         if (isVisible) {
           if (dwellTimer === null && !cancelQueue) {
-            // 180ms scroll-dwell debounce prevents loading iframes during fast scroll
             dwellTimer = window.setTimeout(() => {
               dwellTimer = null;
               setQueued(true);
@@ -162,7 +160,7 @@ function SpotifyEmbedInner({
             <Music className="w-4 h-4 text-[#6b7280]" />
           </div>
           <div>
-            <div className="text-[#d1d5db] font-medium">Плеєр Spotify недоступний</div>
+            <div className="text-[#d1d5db] font-medium">{t.playerUnavailable}</div>
             {verificationNote && (
               <div className="text-[11px] text-[#6b7280] line-clamp-1" title={verificationNote}>
                 {verificationNote}
@@ -177,7 +175,7 @@ function SpotifyEmbedInner({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-[#5fb38e] hover:underline shrink-0"
           >
-            <span>Посилання</span>
+            <span>{t.linkText}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         )}
@@ -185,7 +183,10 @@ function SpotifyEmbedInner({
     );
   }
 
-  const embedSrc = `https://open.spotify.com/embed/${type}/${spotifyId}?utm_source=generator&theme=0`;
+  const embedSrc =
+    theme === 'dark'
+      ? `https://open.spotify.com/embed/${type}/${spotifyId}?utm_source=generator&theme=0`
+      : `https://open.spotify.com/embed/${type}/${spotifyId}?utm_source=generator`;
   const externalLink = spotifyUrl || `https://open.spotify.com/${type}/${spotifyId}`;
 
   const handleInstantLoad = () => {
@@ -202,13 +203,13 @@ function SpotifyEmbedInner({
       >
         {shouldMountIframe && (
           <iframe
-            title={`Spotify плеєр: ${title}`}
+            title={`Spotify: ${title}`}
             src={embedSrc}
             width="100%"
             height={height}
             frameBorder="0"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            style={{ colorScheme: 'dark' }}
+            style={{ colorScheme: theme }}
             onLoad={() => {
               setIframeLoaded(true);
               releaseSlotRef.current?.();
@@ -220,12 +221,11 @@ function SpotifyEmbedInner({
           />
         )}
 
-        {/* Dark placeholder overlay stays visible until iframe finishes hydrating */}
         {!iframeLoaded && (
           <button
             type="button"
             onClick={handleInstantLoad}
-            className="absolute inset-0 w-full h-full flex items-center justify-between px-3.5 bg-[#0f1117] hover:bg-[#151822] transition-colors text-left cursor-pointer"
+            className="absolute inset-0 w-full h-full flex items-center justify-between px-3.5 bg-[#0f1117] hover:bg-[#1a1d27] transition-colors text-left cursor-pointer"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-full bg-[#1DB954]/15 border border-[#1DB954]/35 flex items-center justify-center shrink-0">
@@ -239,10 +239,10 @@ function SpotifyEmbedInner({
                 <div className="text-xs font-medium text-[#e5e0d5] truncate">{title}</div>
                 <div className="text-[11px] text-[#6b7280] truncate">
                   {shouldMountIframe
-                    ? 'Підготовка Spotify-плеєра…'
+                    ? t.preparingPlayer
                     : embedMode === 'click'
-                    ? 'Натисніть, щоб відкрити плеєр'
-                    : 'Очікування черги або клік для старту'}
+                    ? t.clickToOpenPlayer
+                    : t.queuedOrClick}
                 </div>
               </div>
             </div>
@@ -257,7 +257,7 @@ function SpotifyEmbedInner({
         href={externalLink}
         target="_blank"
         rel="noopener noreferrer"
-        title="Відкрити у Spotify"
+        title={t.openInSpotify}
         className="h-10 px-2.5 rounded-lg bg-[#1a1d27] border border-white/10 text-xs font-medium text-[#1DB954] hover:bg-[#1DB954]/15 hover:border-[#1DB954]/40 inline-flex items-center gap-1.5 transition-colors shrink-0"
       >
         <span className="hidden sm:inline">Spotify</span>
