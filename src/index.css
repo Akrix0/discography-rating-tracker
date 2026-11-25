@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-canvas: #0b0c10;
+    --bg-card: #13151c;
+    --bg-elevated: #1a1d27;
+    --text-primary: #f3efe6;
+    --text-muted: #9ca3af;
+    --accent-crimson: #d95d4e;
+    --accent-amber: #e09f5a;
+    --accent-sage: #5fb38e;
+  }
+
+  body {
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    background-image:
+      radial-gradient(circle at 12% 0%, rgba(217, 93, 78, 0.08), transparent 40%),
+      radial-gradient(circle at 88% 12%, rgba(224, 159, 90, 0.06), transparent 36%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, .font-display {
+    font-family: 'Unbounded', 'Manrope', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-mono-num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0c10;
+}
+::-webkit-scrollbar-thumb {
+  background: #272b38;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4054;
+}
+
+input[type='range'].rating-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type='range'].rating-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #f3efe6;
+  border: 2px solid #d95d4e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+input[type='range'].rating-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+  border-color: #e09f5a;
+}
+
+input[type='range'].rating-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #f3efe6;
+  border: 2px solid #d95d4e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease;
+}
+
+input[type='number'].no-spinner::-webkit-outer-spin-button,
+input[type='number'].no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'].no-spinner {
+  -moz-appearance: textfield;
+}

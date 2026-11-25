@@ -1,0 +1,423 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Award,
+  Disc3,
+  Globe2,
+  Loader2,
+  Music2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
+import { api } from '../api';
+import { useArtist } from '../context/ArtistContext';
+import type { GlobalStatsResponse } from '../types';
+import { SongRow } from '../components/SongRow';
+import { ReleaseCard } from '../components/ReleaseCard';
+
+export function ArtistsHubPage() {
+  const { setSelectedArtistId, refreshArtists, openAddModal } = useArtist();
+  const navigate = useNavigate();
+
+  const [stats, setStats] = useState<GlobalStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'songs' | 'albums' | 'artists'>('songs');
+  const [syncingArtistId, setSyncingArtistId] = useState<number | null>(null);
+  const [syncProgress, setSyncProgress] = useState<{ percent: number; stage: string } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const loadGlobal = useCallback(async () => {
+    try {
+      const data = await api.getGlobalStats();
+      setStats(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadGlobal();
+  }, [loadGlobal]);
+
+  const handleOpenArtist = (artistId: number) => {
+    setSelectedArtistId(artistId);
+    navigate('/');
+  };
+
+  const handleSyncArtist = async (artistId: number) => {
+    setSyncingArtistId(artistId);
+    setSyncProgress({ percent: 5, stage: 'Перевірка оновлень…' });
+    try {
+      const { jobId } = await api.syncArtist(artistId);
+      const timer = window.setInterval(async () => {
+        try {
+          const st = await api.getJobStatus(jobId);
+          setSyncProgress({ percent: st.percent, stage: st.stage });
+          if (st.status === 'completed') {
+            window.clearInterval(timer);
+            setSyncingArtistId(null);
+            setSyncProgress(null);
+            setToast(
+              `Оновлено ${st.artistName}: +${st.addedReleases} релізів, +${st.addedSongs} пісень.`
+            );
+            await refreshArtists();
+            await loadGlobal();
+          } else if (st.status === 'error') {
+            window.clearInterval(timer);
+            setSyncingArtistId(null);
+            setSyncProgress(null);
+            setToast(`Помилка оновлення: ${st.error}`);
+          }
+        } catch {
+          // retry
+        }
+      }, 600);
+    } catch (err) {
+      setSyncingArtistId(null);
+      setSyncProgress(null);
+      setToast(err instanceof Error ? err.message : 'Помилка синхронізації');
+    }
+  };
+
+  const handleDeleteArtist = async (artistId: number) => {
+    await api.deleteArtist(artistId);
+    setConfirmDeleteId(null);
+    const updated = await refreshArtists();
+    setSelectedArtistId(updated[0]?.id ?? null);
+    await loadGlobal();
+    setToast('Виконавця та всі його дані видалено.');
+  };
+
+  if (loading || !stats) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-36 rounded-3xl bg-[#13151c]" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-56 rounded-2xl bg-[#13151c]" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header & Global Summary */}
+      <section className="rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-2.5 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e09f5a]/15 border border-[#e09f5a]/30 text-xs font-medium text-[#e09f5a]">
+            <Globe2 className="w-3.5 h-3.5" />
+            <span>Мульти-артист бібліотека • {stats.totalArtists} виконавців</span>
+          </div>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
+            Мої виконавці та загальний рейтинг
+          </h1>
+          <p className="text-sm text-[#9ca3af]">
+            Додавайте улюблені гурти за назвою або посиланням на Spotify, перемикайтеся між їхніми дискографіями та порівнюйте найкращі треки й альбоми в єдиному топі.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={openAddModal}
+          className="px-5 py-3 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-white text-sm font-semibold inline-flex items-center gap-2 shadow-lg shadow-[#d95d4e]/25 shrink-0 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Додати нового виконавця</span>
+        </button>
+      </section>
+
+      {toast && (
+        <div className="rounded-xl bg-[#13151c] border border-[#e09f5a]/40 px-4 py-3 text-sm text-[#f3efe6] flex items-center justify-between">
+          <span>{toast}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-xs text-[#9ca3af] hover:text-white"
+          >
+            Закрити
+          </button>
+        </div>
+      )}
+
+      {/* Global Stat Cards */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
+          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
+            <span>Виконавців у базі</span>
+            <Users className="w-4 h-4 text-[#e09f5a]" />
+          </div>
+          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#f3efe6] mt-2">
+            {stats.totalArtists}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
+          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
+            <span>Оцінено композицій</span>
+            <Music2 className="w-4 h-4 text-[#5fb38e]" />
+          </div>
+          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#5fb38e] mt-2">
+            {stats.ratedSongs}/{stats.totalSongs}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
+          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
+            <span>Оцінено релізів</span>
+            <Disc3 className="w-4 h-4 text-[#d98c5f]" />
+          </div>
+          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#d98c5f] mt-2">
+            {stats.ratedReleases}/{stats.totalReleases}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
+          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
+            <span>Середній бал (усі пісні)</span>
+            <TrendingUp className="w-4 h-4 text-[#d95d4e]" />
+          </div>
+          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#d95d4e] mt-2">
+            {stats.overallAverageSongRating !== null ? stats.overallAverageSongRating : '—'}
+          </div>
+        </div>
+      </section>
+
+      {/* Artist Cards Grid */}
+      <section className="space-y-4">
+        <h2 className="font-display text-lg font-bold text-[#f3efe6]">Бібліотека виконавців</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {stats.artistLeaderboard.map((artist) => {
+            const isSyncing = syncingArtistId === artist.id;
+            const isConfirmingDel = confirmDeleteId === artist.id;
+            return (
+              <div
+                key={artist.id}
+                className="rounded-2xl bg-[#13151c] border border-white/[0.08] hover:border-white/20 p-5 flex flex-col justify-between gap-4 transition-all"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#1a1d27] border border-white/10 shrink-0 flex items-center justify-center">
+                    {artist.image_url ? (
+                      <img
+                        src={artist.image_url}
+                        alt={artist.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Disc3 className="w-8 h-8 text-[#4b5563]" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display text-lg font-bold text-[#f3efe6] truncate">
+                      {artist.name}
+                    </h3>
+                    <div className="mt-1 text-xs text-[#9ca3af] font-mono-num">
+                      {artist.totalReleases} релізів • {artist.totalSongs} пісень
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-xs">
+                      <span className="px-2 py-0.5 rounded-md bg-white/[0.05] font-mono-num text-[#e09f5a]">
+                        Пісні: {artist.averageSongRating ?? '—'}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-white/[0.05] font-mono-num text-[#5fb38e]">
+                        Альбоми: {artist.averageReleaseRating ?? '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs text-[#9ca3af] font-mono-num">
+                    <span>
+                      Оцінено {artist.ratedSongs}/{artist.totalSongs}
+                    </span>
+                    <span className="text-[#e09f5a]">{artist.completionPercent}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#d95d4e] to-[#5fb38e] transition-all duration-500"
+                      style={{ width: `${Math.min(100, artist.completionPercent)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {isSyncing && syncProgress && (
+                  <div className="text-xs text-[#e09f5a] flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span className="truncate">
+                      {syncProgress.stage} ({syncProgress.percent}%)
+                    </span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenArtist(artist.id)}
+                    className="flex-1 h-9 rounded-xl bg-white/[0.06] hover:bg-[#d95d4e] text-xs font-semibold text-[#f3efe6] transition-colors"
+                  >
+                    Відкрити огляд
+                  </button>
+                  <button
+                    type="button"
+                    disabled={syncingArtistId !== null}
+                    onClick={() => handleSyncArtist(artist.id)}
+                    title="Перевірити нові релізи"
+                    className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-[#d1d5db] inline-flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Оновити</span>
+                  </button>
+
+                  {isConfirmingDel ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteArtist(artist.id)}
+                      className="h-9 px-3 rounded-xl bg-[#d95d4e] text-white text-xs font-semibold"
+                    >
+                      Підтвердити
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(artist.id)}
+                      title="Видалити виконавця"
+                      className="h-9 w-9 rounded-xl bg-white/[0.04] hover:bg-[#d95d4e]/20 border border-white/10 hover:border-[#d95d4e]/40 text-[#9ca3af] hover:text-[#e87c6f] flex items-center justify-center transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Global Cross-Artist Leaderboard */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-[#e09f5a]" />
+            <h2 className="font-display text-lg font-bold text-[#f3efe6]">
+              Глобальний крос-артист рейтинг
+            </h2>
+          </div>
+
+          <div className="inline-flex rounded-xl bg-[#13151c] p-1 border border-white/[0.08]">
+            {(
+              [
+                { key: 'songs', label: 'Топ пісень' },
+                { key: 'albums', label: 'Топ альбомів' },
+                { key: 'artists', label: 'Рейтинг виконавців' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-[#d95d4e] text-white'
+                    : 'text-[#9ca3af] hover:text-[#f3efe6]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeTab === 'songs' && (
+          <div className="space-y-3">
+            {stats.globalTopSongs.length === 0 ? (
+              <div className="rounded-2xl bg-[#13151c] border border-dashed border-white/10 p-8 text-center text-sm text-[#9ca3af]">
+                Поки що немає оцінених пісень. Оцініть композиції будь-якого виконавця, щоб побачити загальний топ.
+              </div>
+            ) : (
+              stats.globalTopSongs.map((song, idx) => (
+                <SongRow
+                  key={song.id}
+                  song={song}
+                  trackNumber={idx + 1}
+                  showArtist
+                  onSongUpdated={() => {
+                    void loadGlobal();
+                    void refreshArtists();
+                  }}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'albums' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {stats.globalTopAlbums.length === 0 ? (
+              <div className="col-span-full rounded-2xl bg-[#13151c] border border-dashed border-white/10 p-8 text-center text-sm text-[#9ca3af]">
+                Поки що немає оцінених альбомів чи релізів.
+              </div>
+            ) : (
+              stats.globalTopAlbums.map((rel) => (
+                <ReleaseCard key={rel.id} release={rel} showArtist />
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'artists' && (
+          <div className="rounded-2xl bg-[#13151c] border border-white/[0.08] overflow-hidden">
+            <div className="divide-y divide-white/[0.06]">
+              {stats.artistLeaderboard.map((a, idx) => (
+                <div
+                  key={a.id}
+                  className="p-4 flex items-center justify-between gap-4 hover:bg-white/[0.02]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="font-mono-num text-sm text-[#6b7280] w-6 text-center">
+                      #{idx + 1}
+                    </span>
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#1a1d27] shrink-0">
+                      {a.image_url && (
+                        <img src={a.image_url} alt={a.name} className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenArtist(a.id)}
+                        className="font-semibold text-sm text-[#f3efe6] hover:text-[#e09f5a] truncate"
+                      >
+                        {a.name}
+                      </button>
+                      <div className="text-xs text-[#9ca3af] font-mono-num">
+                        Оцінено {a.ratedSongs} пісень • {a.ratedReleases} релізів
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 font-mono-num text-sm">
+                    <div className="text-right">
+                      <div className="text-[10px] text-[#9ca3af]">Сер. пісні</div>
+                      <div className="font-bold text-[#e09f5a]">
+                        {a.averageSongRating ?? '—'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-[#9ca3af]">Сер. альбоми</div>
+                      <div className="font-bold text-[#5fb38e]">
+                        {a.averageReleaseRating ?? '—'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
