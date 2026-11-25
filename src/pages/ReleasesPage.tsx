@@ -87,10 +87,10 @@ export function ReleasesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
+        <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-[#f3efe6] break-words">
           {selectedArtist ? t.releasesOf(selectedArtist.name) : t.allLibraryReleases}
         </h1>
-        <p className="text-sm text-[#9ca3af] mt-1">{t.releasesPageSub}</p>
+        <p className="text-xs sm:text-sm text-[#9ca3af] mt-1">{t.releasesPageSub}</p>
       </div>
 
       <FilterBar

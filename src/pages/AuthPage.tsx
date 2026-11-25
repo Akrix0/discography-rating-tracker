@@ -45,14 +45,14 @@ export function AuthPage() {
               <Disc3 className="w-8 h-8 text-[#0b0c10]" />
             </div>
             <div>
-              <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
+              <h1 className="font-display text-xl sm:text-3xl font-bold text-[#f3efe6] break-words">
                 {t.appTitle}
               </h1>
               <p className="text-xs sm:text-sm text-[#9ca3af] mt-1">{t.authSubtitle}</p>
             </div>
           </div>
 
-          <div className="rounded-3xl bg-[#13151c] border border-white/[0.1] p-6 sm:p-7 shadow-2xl shadow-black/30 space-y-5">
+          <div className="rounded-3xl bg-[#13151c] border border-white/[0.1] p-5 sm:p-7 shadow-2xl shadow-black/30 space-y-5">
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-[#0b0c10] p-1 border border-white/[0.07]">
               {(
                 [

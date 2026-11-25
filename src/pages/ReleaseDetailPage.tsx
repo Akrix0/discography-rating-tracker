@@ -105,10 +105,10 @@ export function ReleaseDetailPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <Link
           to="/releases"
-          className="inline-flex items-center gap-1.5 text-sm text-[#9ca3af] hover:text-[#f3efe6] transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-[#9ca3af] hover:text-[#f3efe6] transition-colors shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>{t.allReleasesBack}</span>
@@ -116,16 +116,16 @@ export function ReleaseDetailPage() {
         <Link
           to="/"
           onClick={() => setSelectedArtistId(release.artist_id)}
-          className="text-xs font-semibold text-[#e09f5a] hover:underline"
+          className="text-xs font-semibold text-[#e09f5a] hover:underline truncate max-w-full"
         >
           {t.artistLabel} {release.artist_name} →
         </Link>
       </div>
 
-      <section className="rounded-3xl bg-[#13151c] border border-white/[0.08] p-5 sm:p-8">
+      <section className="rounded-3xl bg-[#13151c] border border-white/[0.08] p-4 sm:p-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-start">
           <div className="md:col-span-4 lg:col-span-3">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-[#1a1d27] border border-white/10 shadow-2xl shadow-black/60 flex items-center justify-center">
+            <div className="max-w-[220px] sm:max-w-[260px] md:max-w-none mx-auto md:mx-0 aspect-square rounded-2xl overflow-hidden bg-[#1a1d27] border border-white/10 shadow-2xl shadow-black/60 flex items-center justify-center">
               {release.cover_url ? (
                 <img
                   src={release.cover_url}
@@ -152,7 +152,7 @@ export function ReleaseDetailPage() {
                 </span>
               </div>
 
-              <h1 className="font-display text-2xl sm:text-4xl font-bold text-[#f3efe6]">
+              <h1 className="font-display text-xl sm:text-3xl lg:text-4xl font-bold text-[#f3efe6] break-words">
                 {release.title}
               </h1>
 
@@ -179,13 +179,13 @@ export function ReleaseDetailPage() {
                 </div>
               )}
 
-              <div className="pt-1 flex flex-wrap items-center gap-3">
+              <div className="pt-1 flex flex-wrap items-center gap-2.5 sm:gap-3">
                 {release.spotify_url && (
                   <a
                     href={release.spotify_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 rounded-xl bg-[#1DB954]/15 hover:bg-[#1DB954]/25 border border-[#1DB954]/40 text-xs sm:text-sm font-semibold text-[#1DB954] inline-flex items-center gap-2 transition-colors"
+                    className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-[#1DB954]/15 hover:bg-[#1DB954]/25 border border-[#1DB954]/40 text-xs sm:text-sm font-semibold text-[#1DB954] inline-flex items-center gap-2 transition-colors"
                   >
                     <span>{t.openReleaseSpotify}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -195,7 +195,7 @@ export function ReleaseDetailPage() {
                   <button
                     type="button"
                     onClick={() => setShowAlbumPlayer((v) => !v)}
-                    className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs sm:text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 transition-colors"
+                    className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs sm:text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 transition-colors"
                   >
                     <Radio className="w-4 h-4 text-[#e09f5a]" />
                     <span>{showAlbumPlayer ? t.hideAlbumPlayer : t.showAlbumPlayer}</span>

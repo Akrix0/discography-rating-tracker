@@ -174,19 +174,19 @@ export function ArtistDashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-6 sm:p-8">
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5 max-w-2xl">
+    <div className="space-y-6 sm:space-y-8">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-4 sm:p-6 lg:p-8">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 max-w-2xl min-w-0">
             {selectedArtist?.image_url && (
               <img
                 src={selectedArtist.image_url}
                 alt={selectedArtist.name}
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border border-white/15 shadow-2xl shrink-0"
+                className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl object-cover border border-white/15 shadow-2xl shrink-0"
               />
             )}
-            <div className="space-y-3">
-              <h1 className="font-display text-2xl sm:text-4xl font-bold text-[#f3efe6] leading-tight">
+            <div className="space-y-3 min-w-0">
+              <h1 className="font-display text-xl sm:text-3xl lg:text-4xl font-bold text-[#f3efe6] leading-tight break-words">
                 {selectedArtist ? (
                   <>
                     {lang === 'uk' ? 'Дискографія ' : ''}
@@ -197,7 +197,7 @@ export function ArtistDashboardPage() {
                   t.overviewAllArtists
                 )}
               </h1>
-              <div className="pt-1 flex flex-wrap items-center gap-2.5">
+              <div className="pt-1 flex flex-wrap items-center gap-2">
                 <Link
                   to="/songs"
                   className="px-4 py-2 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-lg shadow-[#d95d4e]/25"
@@ -242,7 +242,7 @@ export function ArtistDashboardPage() {
             </div>
           </div>
 
-          <div className="shrink-0 w-full lg:w-64 rounded-2xl bg-[#0b0c10]/70 border border-white/[0.08] p-5 space-y-3">
+          <div className="shrink-0 w-full lg:w-64 rounded-2xl bg-[#0b0c10]/70 border border-white/[0.08] p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between text-xs text-[#9ca3af]">
               <span>{t.overallProgress}</span>
               <span className="font-mono-num text-[#e09f5a] font-bold">
@@ -265,33 +265,43 @@ export function ArtistDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {cards.map((c) => {
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        {cards.map((c, idx) => {
           const Icon = c.icon;
+          const isLastOdd = idx === cards.length - 1;
           return (
             <div
               key={c.label}
-              className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-4 sm:p-5 flex flex-col justify-between gap-3"
+              className={`rounded-2xl bg-[#13151c] border border-white/[0.07] p-3.5 sm:p-5 flex flex-col justify-between gap-2.5 sm:gap-3 min-w-0 ${
+                isLastOdd ? 'col-span-2 sm:col-span-1' : ''
+              }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-[#9ca3af] font-medium">{c.label}</span>
-                <Icon className={`w-4 h-4 ${c.accent} opacity-80`} />
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <span className="text-[11px] sm:text-xs text-[#9ca3af] font-medium leading-tight">
+                  {c.label}
+                </span>
+                <Icon className={`w-4 h-4 ${c.accent} opacity-80 shrink-0`} />
               </div>
               <div>
-                <div className={`font-mono-num text-2xl sm:text-3xl font-bold ${c.accent}`}>
+                <div className={`font-mono-num text-xl sm:text-2xl xl:text-3xl font-bold ${c.accent}`}>
                   {c.value}
                 </div>
-                <div className="text-[11px] text-[#6b7280] mt-1">{c.sub}</div>
+                <div className="text-[11px] text-[#6b7280] mt-1 leading-tight">{c.sub}</div>
               </div>
             </div>
           );
         })}
       </section>
 
-      <section className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.categoriesTitle}</h2>
-          <Link to="/songs" className="text-xs text-[#e09f5a] hover:underline inline-flex items-center gap-1">
+      <section className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-4 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6] min-w-0">
+            {t.categoriesTitle}
+          </h2>
+          <Link
+            to="/songs"
+            className="text-xs text-[#e09f5a] hover:underline inline-flex items-center gap-1 shrink-0 whitespace-nowrap"
+          >
             {t.allSongsLink} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -305,16 +315,16 @@ export function ArtistDashboardPage() {
                 to={`/songs?category=${encodeURIComponent(item.category)}`}
                 className="group rounded-xl bg-[#0b0c10]/60 hover:bg-[#1a1d27] border border-white/[0.06] hover:border-white/15 p-3.5 transition-all"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-[#f3efe6] group-hover:text-[#e09f5a] transition-colors">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-[#f3efe6] group-hover:text-[#e09f5a] transition-colors truncate">
                       {item.category}
                     </div>
-                    <div className="text-[11px] text-[#6b7280]">
+                    <div className="text-[11px] text-[#6b7280] truncate">
                       {CATEGORY_LABELS[lang][item.category]}
                     </div>
                   </div>
-                  <div className="text-right font-mono-num">
+                  <div className="text-right font-mono-num shrink-0">
                     <div className="text-xs text-[#f3efe6]">
                       {item.rated}/{item.total}
                     </div>
@@ -338,15 +348,17 @@ export function ArtistDashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-[#e09f5a]" />
-              <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.topSongsTitle}</h2>
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <Award className="w-5 h-5 text-[#e09f5a] shrink-0" />
+              <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6] min-w-0">
+                {t.topSongsTitle}
+              </h2>
             </div>
             <Link
               to="/songs?sortBy=rating&sortDir=desc&ratedStatus=rated"
-              className="text-xs text-[#e09f5a] hover:underline"
+              className="text-xs text-[#e09f5a] hover:underline shrink-0 whitespace-nowrap"
             >
               {t.viewAll}
             </Link>
@@ -395,15 +407,17 @@ export function ArtistDashboardPage() {
           )}
         </div>
 
-        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Disc3 className="w-5 h-5 text-[#d95d4e]" />
-              <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.topAlbumsTitle}</h2>
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <Disc3 className="w-5 h-5 text-[#d95d4e] shrink-0" />
+              <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6] min-w-0">
+                {t.topAlbumsTitle}
+              </h2>
             </div>
             <Link
               to="/releases?sortBy=rating&sortDir=desc&ratedStatus=rated"
-              className="text-xs text-[#e09f5a] hover:underline"
+              className="text-xs text-[#e09f5a] hover:underline shrink-0 whitespace-nowrap"
             >
               {t.viewAll}
             </Link>
@@ -451,12 +465,17 @@ export function ArtistDashboardPage() {
 
       {stats.nextUnratedSongs.length > 0 && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.quickRatingTitle}</h2>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="min-w-0">
+              <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">
+                {t.quickRatingTitle}
+              </h2>
               <p className="text-xs text-[#9ca3af]">{t.quickRatingSub}</p>
             </div>
-            <Link to="/songs?ratedStatus=unrated" className="text-xs text-[#e09f5a] hover:underline">
+            <Link
+              to="/songs?ratedStatus=unrated"
+              className="text-xs text-[#e09f5a] hover:underline shrink-0 whitespace-nowrap"
+            >
               {t.allUnratedLink}
             </Link>
           </div>

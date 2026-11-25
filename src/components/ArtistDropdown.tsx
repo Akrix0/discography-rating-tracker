@@ -52,52 +52,59 @@ export function ArtistDropdown() {
     }
   };
 
+  const totalAllSongs = artists.reduce((sum, a) => sum + a.totalSongs, 0);
+  const ratedAllSongs = artists.reduce((sum, a) => sum + a.ratedSongs, 0);
+  const allPct =
+    totalAllSongs > 0 ? Math.round((ratedAllSongs / totalAllSongs) * 1000) / 10 : 0;
+
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative min-w-0 flex-1 sm:flex-initial">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl bg-[#13151c] hover:bg-[#1a1d27] border border-white/10 hover:border-white/20 transition-all max-w-[180px] sm:max-w-[250px]"
+        className="w-full sm:w-auto sm:max-w-[230px] lg:max-w-[195px] xl:max-w-[260px] flex items-center justify-between gap-1.5 sm:gap-2 pl-1.5 pr-2 sm:pr-2.5 py-1.5 rounded-xl bg-[#13151c] hover:bg-[#1a1d27] border border-white/10 hover:border-white/20 transition-all min-w-0"
       >
-        {selectedArtist ? (
-          <>
-            <div className="w-7 h-7 rounded-lg overflow-hidden bg-[#1a1d27] shrink-0 flex items-center justify-center border border-white/10">
-              {selectedArtist.image_url ? (
-                <img
-                  src={selectedArtist.image_url}
-                  alt={selectedArtist.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Disc3 className="w-4 h-4 text-[#e09f5a]" />
-              )}
-            </div>
-            <div className="min-w-0 text-left">
-              <div className="text-xs sm:text-sm font-semibold text-[#f3efe6] truncate">
-                {selectedArtist.name}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {selectedArtist ? (
+            <>
+              <div className="w-7 h-7 rounded-lg overflow-hidden bg-[#1a1d27] shrink-0 flex items-center justify-center border border-white/10">
+                {selectedArtist.image_url ? (
+                  <img
+                    src={selectedArtist.image_url}
+                    alt={selectedArtist.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Disc3 className="w-4 h-4 text-[#e09f5a]" />
+                )}
               </div>
-              <div className="text-[10px] font-mono-num text-[#9ca3af] leading-none">
-                {selectedArtist.ratedSongs}/{selectedArtist.totalSongs} • {selectedArtist.completionPercent}%
+              <div className="min-w-0 flex-1 text-left">
+                <div className="text-xs sm:text-sm font-semibold text-[#f3efe6] truncate">
+                  {selectedArtist.name}
+                </div>
+                <div className="hidden min-[360px]:block text-[10px] font-mono-num text-[#9ca3af] leading-none truncate">
+                  {selectedArtist.ratedSongs}/{selectedArtist.totalSongs} • {selectedArtist.completionPercent}%
+                </div>
               </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="w-7 h-7 rounded-lg bg-[#e09f5a]/15 border border-[#e09f5a]/30 flex items-center justify-center shrink-0">
-              <Globe2 className="w-4 h-4 text-[#e09f5a]" />
-            </div>
-            <div className="min-w-0 text-left">
-              <div className="text-xs sm:text-sm font-semibold text-[#f3efe6] truncate">
-                {t.allArtists}
+            </>
+          ) : (
+            <>
+              <div className="w-7 h-7 rounded-lg bg-[#e09f5a]/15 border border-[#e09f5a]/30 flex items-center justify-center shrink-0">
+                <Globe2 className="w-4 h-4 text-[#e09f5a]" />
               </div>
-              <div className="text-[10px] text-[#9ca3af] leading-none">
-                {t.inLibraryCount(artists.length)}
+              <div className="min-w-0 flex-1 text-left">
+                <div className="text-xs sm:text-sm font-semibold text-[#f3efe6] truncate">
+                  {t.allArtists}
+                </div>
+                <div className="hidden min-[360px]:block text-[10px] font-mono-num text-[#9ca3af] leading-none truncate">
+                  {ratedAllSongs}/{totalAllSongs} • {allPct}%
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
         <ChevronDown
           className={`w-4 h-4 text-[#9ca3af] shrink-0 transition-transform duration-200 ${
             open ? 'rotate-180' : ''
@@ -106,7 +113,7 @@ export function ArtistDropdown() {
       </button>
 
       {open && (
-        <div className="absolute left-0 mt-2 w-80 max-w-[92vw] rounded-2xl bg-[#13151c] border border-white/15 shadow-2xl shadow-black/40 overflow-hidden z-50">
+        <div className="absolute left-0 top-full mt-1.5 w-[min(20rem,calc(100vw-1.5rem))] sm:w-80 rounded-2xl bg-[#13151c] border border-white/15 shadow-2xl shadow-black/40 overflow-hidden z-50">
           <div className="p-2.5 border-b border-white/[0.08] bg-[#0b0c10]/60">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-[#6b7280] absolute left-2.5 top-1/2 -translate-y-1/2" />

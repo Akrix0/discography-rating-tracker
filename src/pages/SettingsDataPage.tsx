@@ -232,18 +232,18 @@ export function SettingsDataPage() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
+        <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-[#f3efe6] break-words">
           {t.settingsTitle}
         </h1>
-        <p className="text-sm text-[#9ca3af] mt-1">{t.settingsSub}</p>
+        <p className="text-xs sm:text-sm text-[#9ca3af] mt-1">{t.settingsSub}</p>
       </div>
 
       {/* Account & Security */}
-      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-5 sm:p-6 space-y-4">
+      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-[#e09f5a]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.accountSectionTitle}</h2>
+            <UserCheck className="w-5 h-5 text-[#e09f5a] shrink-0" />
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">{t.accountSectionTitle}</h2>
           </div>
         </div>
 
@@ -293,7 +293,7 @@ export function SettingsDataPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="px-4 py-2 rounded-xl bg-[#e09f5a] hover:bg-[#d18f49] disabled:opacity-50 text-[#0b0c10] text-sm font-bold inline-flex items-center gap-2 transition-colors"
+              className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-[#e09f5a] hover:bg-[#d18f49] disabled:opacity-50 text-[#0b0c10] text-sm font-bold inline-flex items-center gap-2 transition-colors"
             >
               {savingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{t.saveProfileBtn}</span>
@@ -318,11 +318,11 @@ export function SettingsDataPage() {
       </section>
 
       {/* Optional Spotify Web API Keys */}
-      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-5 sm:p-6 space-y-4">
+      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-[#1DB954]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">
+            <KeyRound className="w-5 h-5 text-[#1DB954] shrink-0" />
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">
               {t.spotifySectionTitle}
             </h2>
           </div>
@@ -344,7 +344,7 @@ export function SettingsDataPage() {
               href="https://developer.spotify.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#1DB954] hover:underline mr-1"
+              className="text-[#1DB954] hover:underline mr-1 break-all sm:break-normal"
             >
               developer.spotify.com/dashboard
             </a>
@@ -373,7 +373,7 @@ export function SettingsDataPage() {
             <button
               type="submit"
               disabled={savingSpotify || !clientId.trim() || !clientSecret.trim()}
-              className="px-4 py-2 rounded-xl bg-[#1DB954] hover:bg-[#1aa34a] disabled:opacity-40 text-[#0b0c10] text-sm font-bold inline-flex items-center gap-2 transition-colors"
+              className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-[#1DB954] hover:bg-[#1aa34a] disabled:opacity-40 text-[#0b0c10] text-sm font-bold inline-flex items-center gap-2 transition-colors"
             >
               {savingSpotify && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{t.verifySaveKeys}</span>
@@ -407,23 +407,23 @@ export function SettingsDataPage() {
       </section>
 
       {/* Multi-Artist Backup */}
-      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-5 sm:p-6 space-y-4">
+      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <Download className="w-5 h-5 text-[#5fb38e]" />
-          <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.backupTitle}</h2>
+          <Download className="w-5 h-5 text-[#5fb38e] shrink-0" />
+          <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">{t.backupTitle}</h2>
         </div>
         <p className="text-sm text-[#9ca3af]">{t.backupDesc}</p>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={handleExportBackup}
-            className="px-4 py-2 rounded-xl bg-[#5fb38e]/15 hover:bg-[#5fb38e]/25 border border-[#5fb38e]/40 text-sm font-medium text-[#7cc9a7] inline-flex items-center gap-2"
+            className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-[#5fb38e]/15 hover:bg-[#5fb38e]/25 border border-[#5fb38e]/40 text-sm font-medium text-[#7cc9a7] inline-flex items-center gap-2"
           >
             <Download className="w-4 h-4" />
             {t.exportJson}
           </button>
 
-          <label className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 cursor-pointer">
+          <label className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 cursor-pointer">
             <Upload className="w-4 h-4" />
             <span>{t.restoreJson}</span>
             <input
@@ -438,19 +438,19 @@ export function SettingsDataPage() {
       </section>
 
       {/* Manual JSON/CSV Import into selected artist */}
-      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-5 sm:p-6 space-y-4">
+      <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-[#e09f5a]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.manualImportTitle}</h2>
+            <FileSpreadsheet className="w-5 h-5 text-[#e09f5a] shrink-0" />
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">{t.manualImportTitle}</h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <select
               aria-label={t.artistLabel}
               value={targetArtistId}
               onChange={(e) => setTargetArtistId(Number(e.target.value))}
-              className="h-8 px-2.5 rounded-lg bg-[#0b0c10] border border-white/10 text-xs text-[#f3efe6]"
+              className="h-8 px-2.5 rounded-lg bg-[#0b0c10] border border-white/10 text-xs text-[#f3efe6] max-w-[165px] sm:max-w-[240px] truncate"
             >
               {artists.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -512,7 +512,7 @@ export function SettingsDataPage() {
           type="button"
           onClick={handleImportCatalog}
           disabled={!rawInput.trim()}
-          className="px-5 py-2.5 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] disabled:opacity-40 text-sm font-semibold text-white transition-colors"
+          className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] disabled:opacity-40 text-sm font-semibold text-white transition-colors"
         >
           {t.importToArtistBtn}
         </button>

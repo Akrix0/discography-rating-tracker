@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Disc3, ExternalLink, Calendar, ListMusic } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
+import { CATEGORY_LABELS } from '../i18n/translations';
 import { CATEGORY_META, type Release } from '../types';
 
 interface ReleaseCardProps {
@@ -9,7 +10,7 @@ interface ReleaseCardProps {
 }
 
 export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
-  const { t } = usePreferences();
+  const { lang, t } = usePreferences();
   const catMeta = CATEGORY_META[release.category] || CATEGORY_META.Other;
   const hasRating = release.rating !== null;
 
@@ -43,12 +44,12 @@ export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
 
         <div className="absolute bottom-3 left-3">
           <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border backdrop-blur-md ${catMeta.badgeBg}`}>
-            {release.category}
+            {CATEGORY_LABELS[lang][release.category] || release.category}
           </span>
         </div>
       </Link>
 
-      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+      <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between gap-3">
         <div>
           {showArtist && release.artist_name && (
             <div className="text-[11px] font-semibold text-[#e09f5a] mb-0.5 truncate">
@@ -61,7 +62,7 @@ export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
           >
             {release.title}
           </Link>
-          <div className="mt-1.5 flex items-center gap-3 text-xs text-[#9ca3af]">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#9ca3af]">
             <span className="inline-flex items-center gap-1 font-mono-num">
               <Calendar className="w-3.5 h-3.5 text-[#6b7280]" />
               {release.release_date || release.release_year || t.dateUnknown}

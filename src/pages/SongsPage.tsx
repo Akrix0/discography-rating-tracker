@@ -138,15 +138,15 @@ export function SongsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-[#f3efe6] break-words">
             {selectedArtist ? t.songsOf(selectedArtist.name) : t.allLibrarySongs}
           </h1>
-          <p className="text-sm text-[#9ca3af] mt-1">{t.songsPageSub}</p>
+          <p className="text-xs sm:text-sm text-[#9ca3af] mt-1">{t.songsPageSub}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-xs text-[#9ca3af]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 w-full sm:w-auto text-xs text-[#9ca3af] shrink-0">
           {isRefreshing && (
             <span className="inline-flex items-center gap-1.5 text-[#e09f5a]">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -154,8 +154,8 @@ export function SongsPage() {
             </span>
           )}
 
-          <div className="flex items-center gap-1.5">
-            <span>{t.playersMode}</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="shrink-0">{t.playersMode}</span>
             <select
               aria-label={t.playersMode}
               value={embedMode}
@@ -164,15 +164,15 @@ export function SongsPage() {
                 setEmbedModeState(next);
                 setEmbedLoadMode(next);
               }}
-              className="h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[#f3efe6]"
+              className="h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[#f3efe6] min-w-0 max-w-full"
             >
               <option value="auto">{t.modeAuto}</option>
               <option value="click">{t.modeClick}</option>
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span>{t.perPage}</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="shrink-0">{t.perPage}</span>
             <select
               aria-label={t.perPage}
               value={pageSize}
@@ -180,7 +180,7 @@ export function SongsPage() {
                 setPageSize(Number(e.target.value));
                 setPage(1);
               }}
-              className="h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[#f3efe6]"
+              className="h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[#f3efe6] min-w-0 max-w-full"
             >
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -238,7 +238,7 @@ export function SongsPage() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
           <div className="text-xs text-[#9ca3af] font-mono-num">
             {t.shownRange(startIdx + 1, Math.min(startIdx + pageSize, songs.length), songs.length)}
           </div>

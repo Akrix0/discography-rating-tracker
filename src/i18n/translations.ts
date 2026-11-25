@@ -71,10 +71,13 @@ export const UI_TEXT = {
 
     // Nav & Artist Dropdown
     navArtists: 'Мої виконавці',
+    navArtistsShort: 'Артисти',
     navOverview: 'Огляд',
     navSongs: 'Композиції',
+    navSongsShort: 'Пісні',
     navReleases: 'Релізи',
     navSettings: 'Налаштування',
+    navSettingsShort: 'Опції',
     ratedShort: 'Оцінено:',
     logoutTitle: 'Вийти з акаунту',
     allArtists: 'Усі виконавці',
@@ -304,10 +307,13 @@ export const UI_TEXT = {
 
     // Nav & Artist Dropdown
     navArtists: 'My Artists',
+    navArtistsShort: 'Artists',
     navOverview: 'Overview',
     navSongs: 'Songs',
+    navSongsShort: 'Songs',
     navReleases: 'Releases',
     navSettings: 'Settings',
+    navSettingsShort: 'Prefs',
     ratedShort: 'Rated:',
     logoutTitle: 'Sign out',
     allArtists: 'All Artists',

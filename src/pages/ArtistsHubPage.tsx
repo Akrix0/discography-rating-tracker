@@ -106,25 +106,25 @@ export function ArtistsHubPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-2.5 max-w-2xl">
+    <div className="space-y-6 sm:space-y-8">
+      <section className="rounded-3xl bg-gradient-to-br from-[#171923] via-[#13151c] to-[#1a1418] border border-white/[0.08] p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+        <div className="space-y-2.5 max-w-2xl min-w-0">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e09f5a]/15 border border-[#e09f5a]/30 text-xs font-medium text-[#e09f5a]">
-            <Globe2 className="w-3.5 h-3.5" />
+            <Globe2 className="w-3.5 h-3.5 shrink-0" />
             <span>{t.artistsCountBadge(stats.totalArtists)}</span>
           </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#f3efe6]">
+          <h1 className="font-display text-xl sm:text-2xl lg:text-3xl font-bold text-[#f3efe6] break-words">
             {t.hubTitle}
           </h1>
-          <p className="text-sm text-[#9ca3af]">{t.hubSubtitle}</p>
+          <p className="text-xs sm:text-sm text-[#9ca3af]">{t.hubSubtitle}</p>
         </div>
 
         <button
           type="button"
           onClick={openAddModal}
-          className="px-5 py-3 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-white text-sm font-semibold inline-flex items-center gap-2 shadow-lg shadow-[#d95d4e]/25 shrink-0 transition-colors"
+          className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shadow-lg shadow-[#d95d4e]/25 shrink-0 transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 shrink-0" />
           <span>{t.addNewArtist}</span>
         </button>
       </section>
@@ -142,40 +142,40 @@ export function ArtistsHubPage() {
         </div>
       )}
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
-          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>{t.artistsInDb}</span>
-            <Users className="w-4 h-4 text-[#e09f5a]" />
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-3.5 sm:p-5 min-w-0">
+          <div className="flex items-start justify-between gap-2 text-[11px] sm:text-xs text-[#9ca3af]">
+            <span className="leading-tight">{t.artistsInDb}</span>
+            <Users className="w-4 h-4 text-[#e09f5a] shrink-0" />
           </div>
-          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#f3efe6] mt-2">
+          <div className="font-mono-num text-xl sm:text-3xl font-bold text-[#f3efe6] mt-2">
             {stats.totalArtists}
           </div>
         </div>
-        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
-          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>{t.ratedSongsLabel}</span>
-            <Music2 className="w-4 h-4 text-[#5fb38e]" />
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-3.5 sm:p-5 min-w-0">
+          <div className="flex items-start justify-between gap-2 text-[11px] sm:text-xs text-[#9ca3af]">
+            <span className="leading-tight">{t.ratedSongsLabel}</span>
+            <Music2 className="w-4 h-4 text-[#5fb38e] shrink-0" />
           </div>
-          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#5fb38e] mt-2">
+          <div className="font-mono-num text-xl sm:text-3xl font-bold text-[#5fb38e] mt-2">
             {stats.ratedSongs}/{stats.totalSongs}
           </div>
         </div>
-        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
-          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>{t.ratedReleasesLabel}</span>
-            <Disc3 className="w-4 h-4 text-[#d98c5f]" />
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-3.5 sm:p-5 min-w-0">
+          <div className="flex items-start justify-between gap-2 text-[11px] sm:text-xs text-[#9ca3af]">
+            <span className="leading-tight">{t.ratedReleasesLabel}</span>
+            <Disc3 className="w-4 h-4 text-[#d98c5f] shrink-0" />
           </div>
-          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#d98c5f] mt-2">
+          <div className="font-mono-num text-xl sm:text-3xl font-bold text-[#d98c5f] mt-2">
             {stats.ratedReleases}/{stats.totalReleases}
           </div>
         </div>
-        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-5">
-          <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>{t.avgAllSongs}</span>
-            <TrendingUp className="w-4 h-4 text-[#d95d4e]" />
+        <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-3.5 sm:p-5 min-w-0">
+          <div className="flex items-start justify-between gap-2 text-[11px] sm:text-xs text-[#9ca3af]">
+            <span className="leading-tight">{t.avgAllSongs}</span>
+            <TrendingUp className="w-4 h-4 text-[#d95d4e] shrink-0" />
           </div>
-          <div className="font-mono-num text-2xl sm:text-3xl font-bold text-[#d95d4e] mt-2">
+          <div className="font-mono-num text-xl sm:text-3xl font-bold text-[#d95d4e] mt-2">
             {stats.overallAverageSongRating !== null ? stats.overallAverageSongRating : '—'}
           </div>
         </div>
@@ -190,7 +190,7 @@ export function ArtistsHubPage() {
             return (
               <div
                 key={artist.id}
-                className="rounded-2xl bg-[#13151c] border border-white/[0.08] hover:border-white/20 p-5 flex flex-col justify-between gap-4 transition-all"
+                className="rounded-2xl bg-[#13151c] border border-white/[0.08] hover:border-white/20 p-4 sm:p-5 flex flex-col justify-between gap-4 transition-all"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#1a1d27] border border-white/10 shrink-0 flex items-center justify-center">
@@ -211,7 +211,7 @@ export function ArtistsHubPage() {
                     <div className="mt-1 text-xs text-[#9ca3af] font-mono-num">
                       {artist.totalReleases} {t.releasesWord} • {artist.totalSongs} {t.songsWord}
                     </div>
-                    <div className="mt-2 flex items-center gap-2 text-xs">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                       <span className="px-2 py-0.5 rounded-md bg-white/[0.05] font-mono-num text-[#e09f5a]">
                         {t.songsBadge} {artist.averageSongRating ?? '—'}
                       </span>
@@ -250,7 +250,7 @@ export function ArtistsHubPage() {
                   <button
                     type="button"
                     onClick={() => handleOpenArtist(artist.id)}
-                    className="flex-1 h-9 rounded-xl bg-white/[0.06] hover:bg-[#d95d4e] hover:text-white text-xs font-semibold text-[#f3efe6] transition-colors"
+                    className="flex-1 min-w-0 h-9 px-2.5 rounded-xl bg-white/[0.06] hover:bg-[#d95d4e] hover:text-white text-xs font-semibold text-[#f3efe6] transition-colors truncate"
                   >
                     {t.openOverview}
                   </button>
@@ -292,12 +292,14 @@ export function ArtistsHubPage() {
 
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-[#e09f5a]" />
-            <h2 className="font-display text-lg font-bold text-[#f3efe6]">{t.globalLeaderboard}</h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <Award className="w-5 h-5 text-[#e09f5a] shrink-0" />
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6] break-words">
+              {t.globalLeaderboard}
+            </h2>
           </div>
 
-          <div className="inline-flex rounded-xl bg-[#13151c] p-1 border border-white/[0.08]">
+          <div className="grid grid-cols-3 w-full sm:w-auto sm:inline-flex rounded-xl bg-[#13151c] p-1 border border-white/[0.08]">
             {(
               [
                 { key: 'songs', label: t.tabTopSongs },
@@ -309,7 +311,7 @@ export function ArtistsHubPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`px-2 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-colors text-center truncate ${
                   activeTab === tab.key
                     ? 'bg-[#d95d4e] text-white'
                     : 'text-[#9ca3af] hover:text-[#f3efe6]'
@@ -364,31 +366,31 @@ export function ArtistsHubPage() {
               {stats.artistLeaderboard.map((a, idx) => (
                 <div
                   key={a.id}
-                  className="p-4 flex items-center justify-between gap-4 hover:bg-white/[0.02]"
+                  className="p-3 sm:p-4 flex flex-wrap min-[380px]:flex-nowrap items-center justify-between gap-2.5 sm:gap-4 hover:bg-white/[0.02]"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="font-mono-num text-sm text-[#6b7280] w-6 text-center">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <span className="font-mono-num text-xs sm:text-sm text-[#6b7280] w-5 sm:w-6 text-center shrink-0">
                       #{idx + 1}
                     </span>
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#1a1d27] shrink-0">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-[#1a1d27] shrink-0">
                       {a.image_url && (
                         <img src={a.image_url} alt={a.name} className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <button
                         type="button"
                         onClick={() => handleOpenArtist(a.id)}
-                        className="font-semibold text-sm text-[#f3efe6] hover:text-[#e09f5a] truncate"
+                        className="font-semibold text-sm text-[#f3efe6] hover:text-[#e09f5a] truncate block max-w-full text-left"
                       >
                         {a.name}
                       </button>
-                      <div className="text-xs text-[#9ca3af] font-mono-num">
+                      <div className="text-[11px] sm:text-xs text-[#9ca3af] font-mono-num truncate">
                         {a.ratedSongs} {t.songsWord} • {a.ratedReleases} {t.releasesWord}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 font-mono-num text-sm">
+                  <div className="flex items-center gap-2.5 sm:gap-3 font-mono-num text-xs sm:text-sm shrink-0">
                     <div className="text-right">
                       <div className="text-[10px] text-[#9ca3af]">{t.avgSongsCol}</div>
                       <div className="font-bold text-[#e09f5a]">{a.averageSongRating ?? '—'}</div>

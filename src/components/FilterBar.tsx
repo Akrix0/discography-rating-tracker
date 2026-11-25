@@ -1,6 +1,6 @@
 import { Search, RotateCcw, SlidersHorizontal, EyeOff } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
-import { RELEASE_TYPE_I18N } from '../i18n/translations';
+import { CATEGORY_LABELS, RELEASE_TYPE_I18N } from '../i18n/translations';
 import {
   CATEGORIES,
   CATEGORY_META,
@@ -64,7 +64,7 @@ export function FilterBar({
     mode === 'songs' ? meta?.songCategoryCounts : meta?.releaseCategoryCounts;
 
   return (
-    <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-4 sm:p-5 space-y-4">
+    <section className="rounded-2xl bg-[#13151c] border border-white/[0.08] p-3.5 sm:p-5 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <div className="md:col-span-5 relative">
           <Search className="w-4 h-4 text-[#6b7280] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -130,8 +130,8 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1 text-xs text-[#9ca3af] mr-1">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto sm:overflow-visible no-scrollbar pb-1 sm:pb-0 sm:flex-wrap">
+        <span className="inline-flex items-center gap-1 text-xs text-[#9ca3af] mr-1 shrink-0">
           <SlidersHorizontal className="w-3.5 h-3.5" />
           {t.categoriesLabel}
         </span>
@@ -144,22 +144,22 @@ export function FilterBar({
               key={cat}
               type="button"
               onClick={() => toggleCategory(cat)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all inline-flex items-center gap-1.5 shrink-0 ${
                 active
                   ? `${metaStyle.badgeBg} ring-1 ring-white/25`
                   : 'bg-[#0b0c10]/70 text-[#9ca3af] border-white/[0.08] hover:border-white/20 hover:text-[#f3efe6]'
               }`}
             >
-              <span>{cat}</span>
+              <span>{CATEGORY_LABELS[lang][cat] || cat}</span>
               <span className="font-mono-num text-[10px] opacity-75">{count}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/[0.06]">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-xl bg-[#0b0c10] p-1 border border-white/[0.08]">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 pt-2 border-t border-white/[0.06]">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto min-w-0">
+          <div className="grid grid-cols-3 w-full sm:w-auto sm:inline-flex rounded-xl bg-[#0b0c10] p-1 border border-white/[0.08]">
             {(
               [
                 { key: 'all', label: t.statusAll },
@@ -171,7 +171,7 @@ export function FilterBar({
                 key={opt.key}
                 type="button"
                 onClick={() => onChange({ ...filters, ratedStatus: opt.key })}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-colors text-center truncate ${
                   filters.ratedStatus === opt.key
                     ? 'bg-[#d95d4e] text-white'
                     : 'text-[#9ca3af] hover:text-[#f3efe6]'
@@ -186,14 +186,14 @@ export function FilterBar({
             type="button"
             onClick={() => onChange({ ...filters, hideSecondary: !filters.hideSecondary })}
             aria-pressed={filters.hideSecondary}
-            className={`h-8 px-3 rounded-lg border text-xs font-medium inline-flex items-center gap-1.5 transition-all ${
+            className={`min-h-8 py-1.5 px-3 rounded-lg border text-xs font-medium inline-flex items-center justify-center sm:justify-start gap-1.5 transition-all w-full sm:w-auto ${
               filters.hideSecondary
                 ? 'bg-[#e09f5a]/20 text-[#e09f5a] border-[#e09f5a]/50'
                 : 'bg-[#0b0c10] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
             }`}
           >
-            <EyeOff className="w-3.5 h-3.5" />
-            <span>{t.hideSecondary}</span>
+            <EyeOff className="w-3.5 h-3.5 shrink-0" />
+            <span className="leading-tight">{t.hideSecondary}</span>
           </button>
 
           <select
@@ -205,7 +205,7 @@ export function FilterBar({
                 releaseTypes: e.target.value ? [e.target.value as ReleaseType] : [],
               })
             }
-            className="h-8 px-2.5 rounded-lg bg-[#0b0c10] border border-white/10 text-xs text-[#f3efe6] focus:outline-none focus:border-[#e09f5a]"
+            className="h-8 px-2.5 rounded-lg bg-[#0b0c10] border border-white/10 text-xs text-[#f3efe6] focus:outline-none focus:border-[#e09f5a] w-full sm:w-auto sm:max-w-[220px]"
           >
             <option value="">{t.allReleaseTypes}</option>
             {(meta?.releaseTypes || []).map((rt) => (
@@ -215,37 +215,44 @@ export function FilterBar({
             ))}
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-[#9ca3af]">
-            <span>{t.ratingLabel}</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              aria-label="Min rating"
-              value={filters.minRating}
-              onChange={(e) => {
-                const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-                onChange({ ...filters, minRating: v });
-              }}
-              className="no-spinner font-mono-num w-12 h-8 px-1.5 text-center rounded-lg bg-[#0b0c10] border border-white/10 text-[#f3efe6]"
-            />
-            <span>–</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              aria-label="Max rating"
-              value={filters.maxRating}
-              onChange={(e) => {
-                const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-                onChange({ ...filters, maxRating: v });
-              }}
-              className="no-spinner font-mono-num w-12 h-8 px-1.5 text-center rounded-lg bg-[#0b0c10] border border-white/10 text-[#f3efe6]"
-            />
+          <div className="w-full sm:w-auto flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-[#9ca3af]">
+              <span>{t.ratingLabel}</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                aria-label="Min rating"
+                value={filters.minRating}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                  onChange({ ...filters, minRating: v });
+                }}
+                className="no-spinner font-mono-num w-12 h-8 px-1.5 text-center rounded-lg bg-[#0b0c10] border border-white/10 text-[#f3efe6]"
+              />
+              <span>–</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                aria-label="Max rating"
+                value={filters.maxRating}
+                onChange={(e) => {
+                  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                  onChange({ ...filters, maxRating: v });
+                }}
+                className="no-spinner font-mono-num w-12 h-8 px-1.5 text-center rounded-lg bg-[#0b0c10] border border-white/10 text-[#f3efe6]"
+              />
+            </div>
+
+            <div className="sm:hidden text-xs text-[#9ca3af] shrink-0">
+              {t.foundCount}{' '}
+              <span className="font-mono-num font-semibold text-[#f3efe6]">{totalResults}</span>
+            </div>
           </div>
         </div>
 
-        <div className="text-xs text-[#9ca3af]">
+        <div className="hidden sm:block text-xs text-[#9ca3af] shrink-0">
           {t.foundCount}{' '}
           <span className="font-mono-num font-semibold text-[#f3efe6]">{totalResults}</span>
         </div>

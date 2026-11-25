@@ -106,9 +106,46 @@ export function RatingControl({
   const neutralTrack = theme === 'light' ? 'rgba(24,24,27,0.14)' : 'rgba(255,255,255,0.12)';
 
   return (
-    <div className="flex flex-col gap-2.5 w-full">
-      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-        <div className="flex-1 min-w-[140px] flex items-center gap-2.5">
+    <div className="flex flex-col gap-2 w-full min-w-0">
+      <div className="flex items-center justify-between gap-2 text-[11px] leading-none min-w-0">
+        <span className="text-[#9ca3af] font-medium truncate">{t.ratingLabel}</span>
+        <div className="flex items-center justify-end shrink-0">
+          {combinedStatus === 'saving' && (
+            <span className="inline-flex items-center gap-1 text-[#e09f5a]">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>{t.savingText}</span>
+            </span>
+          )}
+          {combinedStatus === 'saved' && (
+            <span className="inline-flex items-center gap-1 text-[#5fb38e]">
+              <Check className="w-3 h-3" />
+              <span>{t.savedText}</span>
+            </span>
+          )}
+          {combinedStatus === 'error' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (ratingSaver.status === 'error') ratingSaver.retry();
+                if (noteSaver.status === 'error') noteSaver.retry();
+              }}
+              className="inline-flex items-center gap-1 text-[#d95d4e] hover:underline"
+              title={ratingSaver.errorMessage || noteSaver.errorMessage || t.errorText}
+            >
+              <AlertCircle className="w-3 h-3" />
+              <span>{t.errorText}</span>
+            </button>
+          )}
+          {combinedStatus === 'idle' && (
+            <span className="text-[#6b7280]">
+              {rating === null ? t.unratedText : t.autoSaveText}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 sm:gap-2.5 w-full min-w-0">
+        <div className="flex-1 min-w-[80px] flex items-center">
           <input
             type="range"
             min={0}
@@ -129,7 +166,7 @@ export function RatingControl({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <div className="relative flex items-center">
             <input
               type="number"
@@ -141,7 +178,7 @@ export function RatingControl({
               value={inputValue}
               onChange={(e) => handleNumberChange(e.target.value)}
               onBlur={() => ratingSaver.flushSave()}
-              className="no-spinner font-mono-num w-16 h-9 px-2.5 text-center text-sm font-semibold rounded-lg bg-[#0b0c10] border border-white/15 text-[#f3efe6] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a] transition-colors"
+              className="no-spinner font-mono-num w-12 sm:w-16 h-8 sm:h-9 px-1.5 sm:px-2 text-center text-xs sm:text-sm font-semibold rounded-lg bg-[#0b0c10] border border-white/15 text-[#f3efe6] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a] transition-colors"
               style={
                 rating !== null
                   ? { borderColor: `${activeColor}66`, color: activeColor }
@@ -156,49 +193,15 @@ export function RatingControl({
               type="button"
               onClick={handleClearRating}
               title={t.clearRatingTitle}
-              className="w-7 h-7 rounded-md flex items-center justify-center text-[#6b7280] hover:text-[#f3efe6] hover:bg-white/10 transition-colors"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-[#6b7280] hover:text-[#f3efe6] hover:bg-white/10 transition-colors shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-
-        <div className="min-w-[96px] flex items-center justify-end text-xs shrink-0">
-          {combinedStatus === 'saving' && (
-            <span className="inline-flex items-center gap-1.5 text-[#e09f5a]">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>{t.savingText}</span>
-            </span>
-          )}
-          {combinedStatus === 'saved' && (
-            <span className="inline-flex items-center gap-1 text-[#5fb38e]">
-              <Check className="w-3.5 h-3.5" />
-              <span>{t.savedText}</span>
-            </span>
-          )}
-          {combinedStatus === 'error' && (
-            <button
-              type="button"
-              onClick={() => {
-                if (ratingSaver.status === 'error') ratingSaver.retry();
-                if (noteSaver.status === 'error') noteSaver.retry();
-              }}
-              className="inline-flex items-center gap-1 text-[#d95d4e] hover:underline"
-              title={ratingSaver.errorMessage || noteSaver.errorMessage || t.errorText}
-            >
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>{t.errorText}</span>
-            </button>
-          )}
-          {combinedStatus === 'idle' && (
-            <span className="text-[11px] text-[#6b7280]">
-              {rating === null ? t.unratedText : t.autoSaveText}
-            </span>
-          )}
-        </div>
       </div>
 
-      <div className="relative flex items-start gap-2">
+      <div className="relative flex items-start gap-2 min-w-0">
         <MessageSquare className="w-3.5 h-3.5 text-[#6b7280] mt-2 shrink-0" />
         <textarea
           rows={compact ? 1 : 2}
@@ -206,7 +209,7 @@ export function RatingControl({
           placeholder={notePlaceholder || t.songNotePlaceholder}
           onChange={(e) => handleNoteChange(e.target.value)}
           onBlur={() => noteSaver.flushSave()}
-          className="w-full resize-y min-h-[34px] rounded-lg bg-[#0b0c10]/70 border border-white/[0.08] px-3 py-1.5 text-xs sm:text-sm text-[#e5e0d5] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]/50 transition-colors"
+          className="w-full min-w-0 resize-y min-h-[34px] rounded-lg bg-[#0b0c10]/70 border border-white/[0.08] px-3 py-1.5 text-xs sm:text-sm text-[#e5e0d5] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]/50 transition-colors"
         />
       </div>
     </div>

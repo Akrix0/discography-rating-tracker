@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Clock, Disc3, ExternalLink } from 'lucide-react';
+import { Clock, Disc3 } from 'lucide-react';
 import { api, formatDuration } from '../api';
 import { usePreferences } from '../context/PreferencesContext';
+import { CATEGORY_LABELS } from '../i18n/translations';
 import { CATEGORY_META, type Song } from '../types';
 import { RatingControl } from './RatingControl';
 import { SpotifyEmbed } from './SpotifyEmbed';
@@ -14,19 +15,19 @@ interface SongRowProps {
 }
 
 export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }: SongRowProps) {
-  const { t } = usePreferences();
+  const { lang, t } = usePreferences();
   const catMeta = CATEGORY_META[song.category] || CATEGORY_META.Other;
 
   return (
-    <article className="group rounded-2xl bg-[#13151c] border border-white/[0.07] hover:border-white/[0.15] p-4 transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-black/15">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-        <div className="lg:col-span-4 flex items-start gap-3.5 min-w-0">
+    <article className="group rounded-2xl bg-[#13151c] border border-white/[0.07] hover:border-white/[0.15] p-3 sm:p-4 transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-black/15">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-center">
+        <div className="lg:col-span-4 flex items-start gap-2.5 sm:gap-3.5 min-w-0">
           {trackNumber !== undefined && (
             <span className="font-mono-num text-xs text-[#6b7280] w-5 pt-2 text-right shrink-0">
               {trackNumber}.
             </span>
           )}
-          <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#1a1d27] border border-white/10 shrink-0 flex items-center justify-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-[#1a1d27] border border-white/10 shrink-0 flex items-center justify-center">
             {song.cover_url ? (
               <img
                 src={song.cover_url}
@@ -35,7 +36,7 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             ) : (
-              <Disc3 className="w-7 h-7 text-[#4b5563]" />
+              <Disc3 className="w-6 h-6 sm:w-7 sm:h-7 text-[#4b5563]" />
             )}
           </div>
 
@@ -45,12 +46,12 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
                 {song.artist_name}
               </div>
             )}
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-[#f3efe6] text-base leading-snug truncate max-w-full">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h3 className="font-semibold text-[#f3efe6] text-sm sm:text-base leading-snug break-words line-clamp-2 sm:truncate max-w-full">
                 {song.title}
               </h3>
               {song.version_tag && (
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#e09f5a]/15 text-[#e09f5a] border border-[#e09f5a]/30">
+                <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-medium bg-[#e09f5a]/15 text-[#e09f5a] border border-[#e09f5a]/30">
                   {song.version_tag}
                 </span>
               )}
@@ -62,8 +63,8 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
             </div>
 
             <div className="mt-1 flex items-center gap-2 flex-wrap text-xs text-[#9ca3af]">
-              <span className={`px-2 py-0.5 rounded-full border text-[11px] ${catMeta.badgeBg}`}>
-                {song.category}
+              <span className={`px-2 py-0.5 rounded-full border text-[10px] sm:text-[11px] ${catMeta.badgeBg}`}>
+                {CATEGORY_LABELS[lang][song.category] || song.category}
               </span>
               {song.duration_ms && (
                 <span className="inline-flex items-center gap-1 font-mono-num text-[11px] text-[#9ca3af]">
@@ -84,7 +85,7 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
                   <Link
                     key={`${rel.id}-${rel.track_number}`}
                     to={`/releases/${rel.slug}`}
-                    className="text-[11px] text-[#9ca3af] hover:text-[#f3efe6] bg-white/[0.04] hover:bg-white/[0.09] px-2 py-0.5 rounded-md border border-white/[0.06] truncate max-w-[200px] transition-colors"
+                    className="text-[11px] text-[#9ca3af] hover:text-[#f3efe6] bg-white/[0.04] hover:bg-white/[0.09] px-2 py-0.5 rounded-md border border-white/[0.06] truncate max-w-[140px] sm:max-w-[200px] transition-colors"
                     title={`${rel.title} (${rel.category})`}
                   >
                     {rel.title}
@@ -109,18 +110,6 @@ export function SongRow({ song, trackNumber, showArtist = false, onSongUpdated }
             verificationNote={song.verification_note}
             height={80}
           />
-          {song.spotify_url && (
-            <div className="mt-1 flex justify-end lg:hidden">
-              <a
-                href={song.spotify_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-[#1DB954] inline-flex items-center gap-1 hover:underline"
-              >
-                {t.openInSpotify} <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          )}
         </div>
 
         <div className="lg:col-span-4 min-w-0">

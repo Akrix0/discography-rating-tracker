@@ -154,15 +154,15 @@ function SpotifyEmbedInner({
 
   if (!spotifyId) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-xl bg-[#0b0c10]/80 border border-white/[0.07] px-3.5 py-2.5 min-h-[60px]">
-        <div className="flex items-center gap-2.5 text-xs text-[#9ca3af]">
+      <div className="flex items-center justify-between gap-2.5 sm:gap-3 rounded-xl bg-[#0b0c10]/80 border border-white/[0.07] px-3 sm:px-3.5 py-2.5 min-h-[60px] min-w-0">
+        <div className="flex items-center gap-2.5 text-xs text-[#9ca3af] min-w-0 flex-1">
           <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
             <Music className="w-4 h-4 text-[#6b7280]" />
           </div>
-          <div>
-            <div className="text-[#d1d5db] font-medium">{t.playerUnavailable}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[#d1d5db] font-medium truncate">{t.playerUnavailable}</div>
             {verificationNote && (
-              <div className="text-[11px] text-[#6b7280] line-clamp-1" title={verificationNote}>
+              <div className="text-[11px] text-[#6b7280] truncate" title={verificationNote}>
                 {verificationNote}
               </div>
             )}
@@ -225,9 +225,9 @@ function SpotifyEmbedInner({
           <button
             type="button"
             onClick={handleInstantLoad}
-            className="absolute inset-0 w-full h-full flex items-center justify-between px-3.5 bg-[#0f1117] hover:bg-[#1a1d27] transition-colors text-left cursor-pointer"
+            className="absolute inset-0 w-full h-full flex items-center justify-between px-2.5 sm:px-3.5 bg-[#0f1117] hover:bg-[#1a1d27] transition-colors text-left cursor-pointer"
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <div className="w-9 h-9 rounded-full bg-[#1DB954]/15 border border-[#1DB954]/35 flex items-center justify-center shrink-0">
                 {shouldMountIframe || queued ? (
                   <Loader2 className="w-4 h-4 text-[#1DB954] animate-spin" />
@@ -246,7 +246,7 @@ function SpotifyEmbedInner({
                 </div>
               </div>
             </div>
-            <span className="text-[10px] font-mono-num text-[#1DB954] px-2 py-0.5 rounded bg-[#1DB954]/10 shrink-0 ml-2">
+            <span className="hidden min-[380px]:inline-block text-[10px] font-mono-num text-[#1DB954] px-2 py-0.5 rounded bg-[#1DB954]/10 shrink-0 ml-2">
               Spotify
             </span>
           </button>
@@ -258,7 +258,8 @@ function SpotifyEmbedInner({
         target="_blank"
         rel="noopener noreferrer"
         title={t.openInSpotify}
-        className="h-10 px-2.5 rounded-lg bg-[#1a1d27] border border-white/10 text-xs font-medium text-[#1DB954] hover:bg-[#1DB954]/15 hover:border-[#1DB954]/40 inline-flex items-center gap-1.5 transition-colors shrink-0"
+        aria-label={t.openInSpotify}
+        className="w-9 h-9 sm:w-auto sm:h-10 sm:px-2.5 rounded-lg bg-[#1a1d27] border border-white/10 text-xs font-medium text-[#1DB954] hover:bg-[#1DB954]/15 hover:border-[#1DB954]/40 inline-flex items-center justify-center gap-1.5 transition-colors shrink-0"
       >
         <span className="hidden sm:inline">Spotify</span>
         <ExternalLink className="w-3.5 h-3.5" />

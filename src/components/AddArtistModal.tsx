@@ -140,30 +140,30 @@ export function AddArtistModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/75 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-3xl bg-[#13151c] border border-white/15 shadow-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#d95d4e]/15 border border-[#d95d4e]/35 flex items-center justify-center">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/[0.08] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-[#d95d4e]/15 border border-[#d95d4e]/35 flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 text-[#e09f5a]" />
             </div>
-            <div>
-              <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">
+            <div className="min-w-0">
+              <h2 className="font-display text-sm sm:text-lg font-bold text-[#f3efe6] break-words">
                 {t.addArtistTitle}
               </h2>
-              <p className="text-[11px] text-[#9ca3af]">{t.addArtistSubtitle}</p>
+              <p className="text-[11px] text-[#9ca3af] leading-snug">{t.addArtistSubtitle}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={closeAddModal}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9ca3af] hover:text-[#f3efe6] hover:bg-white/10"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9ca3af] hover:text-[#f3efe6] hover:bg-white/10 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[82vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[82vh] overflow-y-auto">
           {jobStatus ? (
             <div className="py-6 space-y-5">
               <div className="flex items-center justify-between text-sm">
@@ -231,8 +231,8 @@ export function AddArtistModal() {
             </div>
           ) : (
             <>
-              <form onSubmit={handleSearch} className="flex gap-2">
-                <div className="relative flex-1">
+              <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1 min-w-0">
                   <Search className="w-4 h-4 text-[#6b7280] absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -245,7 +245,7 @@ export function AddArtistModal() {
                 <button
                   type="submit"
                   disabled={searching || !query.trim()}
-                  className="h-11 px-5 rounded-xl bg-[#e09f5a] hover:bg-[#d18f49] disabled:opacity-40 text-[#0b0c10] font-semibold text-sm inline-flex items-center gap-2 transition-colors shrink-0"
+                  className="h-10 sm:h-11 px-5 rounded-xl bg-[#e09f5a] hover:bg-[#d18f49] disabled:opacity-40 text-[#0b0c10] font-semibold text-sm inline-flex items-center justify-center gap-2 transition-colors shrink-0"
                 >
                   {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   <span>{t.findBtn}</span>
@@ -353,11 +353,11 @@ export function AddArtistModal() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-2">
                 <button
                   type="button"
                   onClick={closeAddModal}
-                  className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs sm:text-sm text-[#d1d5db]"
+                  className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs sm:text-sm text-[#d1d5db] text-center"
                 >
                   {t.cancel}
                 </button>
@@ -365,7 +365,7 @@ export function AddArtistModal() {
                   type="button"
                   disabled={!selectedCandidate && !query.trim()}
                   onClick={handleStartImport}
-                  className="px-5 py-2.5 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] disabled:opacity-40 text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-lg shadow-[#d95d4e]/25"
+                  className="px-5 py-2.5 rounded-xl bg-[#d95d4e] hover:bg-[#c84d3e] disabled:opacity-40 text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#d95d4e]/25"
                 >
                   <Plus className="w-4 h-4" />
                   <span>{t.collectBtn}</span>
