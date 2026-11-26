@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Disc3, ExternalLink, Calendar, ListMusic } from 'lucide-react';
+import { Disc3, ExternalLink, Calendar, ListMusic, Trophy } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
 import { CATEGORY_LABELS } from '../i18n/translations';
 import { CATEGORY_META, type Release } from '../types';
@@ -72,6 +72,12 @@ export function ReleaseCard({ release, showArtist = false }: ReleaseCardProps) {
               {release.rated_track_count}/{release.track_count} {t.tracksShort}
             </span>
           </div>
+          {release.best_song_title && (
+            <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#e09f5a]/15 border border-[#e09f5a]/30 text-[11px] font-medium text-[#f3c969] max-w-full">
+              <Trophy className="w-3 h-3 shrink-0" />
+              <span className="truncate">{release.best_song_title}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">

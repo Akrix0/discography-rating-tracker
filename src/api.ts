@@ -148,6 +148,25 @@ export const api = {
       { method: 'PUT', body: JSON.stringify({ note }) }
     ),
 
+  setReleaseBestTrack: (releaseId: number, songId: number | null) =>
+    request<{
+      ok: boolean;
+      releaseId: number;
+      bestSongId: number | null;
+      bestSongTitle: string | null;
+      songRating?: number;
+      updatedAt: string;
+    }>(`/api/releases/${releaseId}/best-track`, {
+      method: 'PUT',
+      body: JSON.stringify({ songId }),
+    }),
+
+  reorderSongsByRating: (rating: number, orderedSongIds: number[]) =>
+    request<{ ok: boolean; rating: number; orderedSongIds: number[] }>('/api/songs/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ rating, orderedSongIds }),
+    }),
+
   getSettings: () =>
     request<{ hasSpotifyApi: boolean; spotifyClientIdMasked: string | null }>('/api/settings'),
   saveSpotifySettings: (clientId: string, clientSecret: string) =>

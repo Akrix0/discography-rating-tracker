@@ -614,7 +614,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
                 s.id, s.title, s.version_tag, s.category, s.cover_url, s.spotify_url,
                 a.id AS artist_id, a.name AS artist_name,
                 pr.title AS release_title, pr.slug AS release_slug,
-                sr.rating, sr.updated_at AS rating_updated_at,
+                sr.rating, sr.rank_order, sr.updated_at AS rating_updated_at,
                 COALESCE(n.content_enc, '') AS note_enc, n.updated_at AS note_updated_at
                FROM user_artists ua
                JOIN songs s ON s.artist_id = ua.artist_id
@@ -630,7 +630,9 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
                ORDER BY
                  CASE WHEN ? = 1 AND sr.rating IS NOT NULL THEN 0 ELSE 1 END ASC,
                  CASE WHEN ? = 1 THEN sr.rating ELSE 0 END DESC,
-                 COALESCE(sr.updated_at, n.updated_at) DESC
+                 CASE WHEN ? = 1 THEN COALESCE(sr.rank_order, 999999) ELSE 999999 END ASC,
+                 COALESCE(sr.updated_at, n.updated_at) DESC,
+                 s.id ASC
                LIMIT 200`,
               [
                 targetId,
@@ -640,6 +642,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
                 canViewNotes ? 1 : 0,
                 canViewRatings ? 1 : 0,
                 canViewRatings ? 1 : 0,
+                canViewRatings ? 1 : 0,
               ]
             ),
             db.all<Record<string, unknown>>(
@@ -647,12 +650,15 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
                 r.id, r.slug, r.title, r.category, r.release_type, r.release_year, r.cover_url, r.spotify_url,
                 a.id AS artist_id, a.name AS artist_name,
                 rr.rating, rr.updated_at AS rating_updated_at,
-                COALESCE(n.content_enc, '') AS note_enc, n.updated_at AS note_updated_at
+                COALESCE(n.content_enc, '') AS note_enc, n.updated_at AS note_updated_at,
+                bs.title AS best_song_title
                FROM user_artists ua
                JOIN releases r ON r.artist_id = ua.artist_id
                JOIN artists a ON a.id = r.artist_id
                LEFT JOIN release_ratings rr ON rr.release_id = r.id AND rr.user_id = ?
                LEFT JOIN notes n ON n.user_id = ? AND n.target_type = 'release' AND n.target_id = r.id
+               LEFT JOIN release_best_tracks rbt ON rbt.release_id = r.id AND rbt.user_id = ?
+               LEFT JOIN songs bs ON bs.id = rbt.song_id
                WHERE ua.user_id = ?
                  AND (
                    (? = 1 AND rr.rating IS NOT NULL)
@@ -664,6 +670,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
                  COALESCE(rr.updated_at, n.updated_at) DESC
                LIMIT 120`,
               [
+                targetId,
                 targetId,
                 targetId,
                 targetId,
@@ -684,6 +691,29 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
       connectionsPromise,
       contentPromise,
     ]);
+
+    const bestBySongMap = new Map<number, { id: number; slug: string; title: string }[]>();
+    if (canViewRatings && songRows.length > 0) {
+      const sIds = songRows.map((s) => Number(s.id));
+      const ph = sIds.map(() => '?').join(',');
+      const bestRows = await db.all<Record<string, unknown>>(
+        `SELECT rbt.song_id, r.id AS release_id, r.slug AS release_slug, r.title AS release_title
+         FROM release_best_tracks rbt
+         JOIN releases r ON r.id = rbt.release_id
+         WHERE rbt.user_id = ? AND rbt.song_id IN (${ph})
+         ORDER BY r.release_year ASC, r.id ASC`,
+        [targetId, ...sIds]
+      );
+      for (const b of bestRows) {
+        const sid = Number(b.song_id);
+        if (!bestBySongMap.has(sid)) bestBySongMap.set(sid, []);
+        bestBySongMap.get(sid)!.push({
+          id: Number(b.release_id),
+          slug: String(b.release_slug),
+          title: String(b.release_title),
+        });
+      }
+    }
 
     const friendsList = canViewConnections
       ? connRows
@@ -736,6 +766,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
         release_slug: s.release_slug ? String(s.release_slug) : null,
         rating: canViewRatings && s.rating !== null ? Number(s.rating) : null,
         note: canViewNotes && s.note_enc ? decryptText(String(s.note_enc)) : null,
+        best_of_releases: canViewRatings ? bestBySongMap.get(Number(s.id)) || [] : [],
         updatedAt: String(s.rating_updated_at || s.note_updated_at || ''),
       })),
       ratedReleases: releaseRows.map((r) => ({
@@ -751,6 +782,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
         artist_name: String(r.artist_name),
         rating: canViewRatings && r.rating !== null ? Number(r.rating) : null,
         note: canViewNotes && r.note_enc ? decryptText(String(r.note_enc)) : null,
+        best_song_title: canViewRatings && r.best_song_title ? String(r.best_song_title) : null,
         updatedAt: String(r.rating_updated_at || r.note_updated_at || ''),
       })),
     });

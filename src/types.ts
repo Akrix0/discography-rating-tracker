@@ -167,6 +167,12 @@ export interface ImportJobStatus {
   error?: string;
 }
 
+export interface BestReleaseBadge {
+  id: number;
+  slug: string;
+  title: string;
+}
+
 export interface LinkedReleaseSummary {
   id: number;
   slug: string;
@@ -206,10 +212,12 @@ export interface Song {
   verification_note: string | null;
   created_at: string;
   rating: number | null;
+  rank_order: number | null;
   rating_updated_at: string | null;
   note: string;
   note_updated_at: string | null;
   releases: LinkedReleaseSummary[];
+  best_of_releases: BestReleaseBadge[];
 }
 
 export interface Release {
@@ -237,6 +245,8 @@ export interface Release {
   track_count: number;
   rated_track_count: number;
   average_track_rating: number | null;
+  best_song_id: number | null;
+  best_song_title: string | null;
 }
 
 export interface ReleaseTrack extends Song {
@@ -426,6 +436,7 @@ export interface PublicRatedSong {
   release_slug: string | null;
   rating: number | null;
   note: string | null;
+  best_of_releases: BestReleaseBadge[];
   updatedAt: string;
 }
 
@@ -442,6 +453,7 @@ export interface PublicRatedRelease {
   artist_name: string;
   rating: number | null;
   note: string | null;
+  best_song_title: string | null;
   updatedAt: string;
 }
 

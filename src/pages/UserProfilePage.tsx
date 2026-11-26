@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Music2,
   Search,
+  Trophy,
   UserMinus,
   UserPlus,
   Users,
@@ -602,6 +603,20 @@ export function UserProfilePage() {
                           <span>{CATEGORY_LABELS[lang][song.category as Category] || song.category}</span>
                           {song.release_title && <span>• {song.release_title}</span>}
                         </div>
+                        {canViewRatings && (song.best_of_releases?.length ?? 0) > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {song.best_of_releases.map((b) => (
+                              <Link
+                                key={b.id}
+                                to={`/releases/${b.slug}`}
+                                className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#e09f5a]/15 text-[#f3c969] border border-[#e09f5a]/35 inline-flex items-center gap-1 hover:bg-[#e09f5a]/25 transition-colors"
+                              >
+                                <Trophy className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{t.bestOnReleaseBadge(b.title)}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -666,6 +681,14 @@ export function UserProfilePage() {
                           {CATEGORY_LABELS[lang][rel.category as Category] || rel.category}
                           {rel.release_year ? ` • ${rel.release_year}` : ''}
                         </div>
+                        {canViewRatings && rel.best_song_title && (
+                          <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#e09f5a]/15 text-[#f3c969] border border-[#e09f5a]/30 text-[11px] font-medium max-w-full">
+                            <Trophy className="w-3 h-3 shrink-0" />
+                            <span className="truncate">
+                              {t.bestTrackOfLabel} {rel.best_song_title}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 

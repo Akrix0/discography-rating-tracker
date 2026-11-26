@@ -12,6 +12,10 @@ import {
   RefreshCw,
   ExternalLink,
   Loader2,
+  Trophy,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
@@ -19,6 +23,12 @@ import { usePreferences } from '../context/PreferencesContext';
 import { CATEGORY_LABELS } from '../i18n/translations';
 import { type StatsResponse } from '../types';
 import { SongRow } from '../components/SongRow';
+import {
+  canMoveWithinSameRating,
+  hasAnyTiedRating,
+  reorderWithinSameRating,
+  stepMoveWithinSameRating,
+} from '../utils/reorderSameScore';
 
 export function ArtistDashboardPage() {
   const { selectedArtist, selectedArtistId, refreshArtists } = useArtist();
@@ -27,6 +37,8 @@ export function ArtistDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncStage, setSyncStage] = useState<string | null>(null);
+  const [dragSongId, setDragSongId] = useState<number | null>(null);
+  const [dragOverSongId, setDragOverSongId] = useState<number | null>(null);
 
   const loadStats = useCallback(
     async (silent = false) => {
@@ -83,6 +95,28 @@ export function ArtistDashboardPage() {
     );
     void loadStats(true);
     void refreshArtists();
+  };
+
+  const handleStepTopSong = (index: number, dir: -1 | 1) => {
+    if (!stats) return;
+    const res = stepMoveWithinSameRating(stats.topSongs, index, dir);
+    if (!res) return;
+    setStats((prev) => (prev ? { ...prev, topSongs: res.nextList } : prev));
+    void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+  };
+
+  const handleDropTopSong = (targetId: number) => {
+    if (!stats || dragSongId === null) {
+      setDragSongId(null);
+      setDragOverSongId(null);
+      return;
+    }
+    const res = reorderWithinSameRating(stats.topSongs, dragSongId, targetId);
+    setDragSongId(null);
+    setDragOverSongId(null);
+    if (!res) return;
+    setStats((prev) => (prev ? { ...prev, topSongs: res.nextList } : prev));
+    void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
   };
 
   const handleSync = async () => {
@@ -172,6 +206,8 @@ export function ArtistDashboardPage() {
       accent: 'text-[#d95d4e]',
     },
   ];
+
+  const showTiedHint = hasAnyTiedRating(stats.topSongs);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -350,11 +386,16 @@ export function ArtistDashboardPage() {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl bg-[#13151c] border border-white/[0.07] p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2 min-w-0">
-              <Award className="w-5 h-5 text-[#e09f5a] shrink-0" />
-              <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6] min-w-0">
-                {t.topSongsTitle}
-              </h2>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Award className="w-5 h-5 text-[#e09f5a] shrink-0" />
+                <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6] min-w-0">
+                  {t.topSongsTitle}
+                </h2>
+              </div>
+              {showTiedHint && (
+                <p className="text-[11px] text-[#9ca3af] mt-0.5">{t.reorderSameScoreHint}</p>
+              )}
             </div>
             <Link
               to="/songs?sortBy=rating&sortDir=desc&ratedStatus=rated"
@@ -370,39 +411,108 @@ export function ArtistDashboardPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {stats.topSongs.map((song, idx) => (
-                <div
-                  key={song.id}
-                  className="flex items-center gap-3 rounded-xl bg-[#0b0c10]/60 border border-white/[0.05] p-2.5"
-                >
-                  <span className="font-mono-num text-xs text-[#6b7280] w-5 text-center">
-                    {idx + 1}
-                  </span>
-                  {song.cover_url ? (
-                    <img
-                      src={song.cover_url}
-                      alt={song.title}
-                      className="w-10 h-10 rounded-lg object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-[#1a1d27] shrink-0" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-[#f3efe6] truncate">
-                      {song.title}
-                      {song.version_tag && (
-                        <span className="ml-1.5 text-xs text-[#e09f5a]">({song.version_tag})</span>
-                      )}
+              {stats.topSongs.map((song, idx) => {
+                const { canUp, canDown } = canMoveWithinSameRating(stats.topSongs, idx);
+                const canDrag = canUp || canDown;
+                const dragged = stats.topSongs.find((s) => s.id === dragSongId);
+                const acceptsDrop = Boolean(dragged && dragged.rating === song.rating && dragged.id !== song.id);
+                return (
+                  <div
+                    key={song.id}
+                    draggable={canDrag}
+                    onDragStart={(e) => {
+                      const target = e.target as HTMLElement | null;
+                      if (target?.closest('button, a')) {
+                        e.preventDefault();
+                        return;
+                      }
+                      setDragSongId(song.id);
+                    }}
+                    onDragOver={(e) => {
+                      if (!acceptsDrop) return;
+                      e.preventDefault();
+                      setDragOverSongId(song.id);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleDropTopSong(song.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragSongId(null);
+                      setDragOverSongId(null);
+                    }}
+                    className={`flex items-center gap-2 sm:gap-3 rounded-xl bg-[#0b0c10]/60 border p-2.5 transition-all ${
+                      dragOverSongId === song.id && acceptsDrop
+                        ? 'border-[#e09f5a] ring-1 ring-[#e09f5a]/50'
+                        : 'border-white/[0.05]'
+                    } ${dragSongId === song.id ? 'opacity-50' : ''}`}
+                  >
+                    {canDrag && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <span
+                          title={t.reorderSameScoreHint}
+                          className="text-[#6b7280] cursor-grab active:cursor-grabbing hidden sm:inline-flex"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            disabled={!canUp}
+                            onClick={() => handleStepTopSong(idx, -1)}
+                            title={t.moveUpTitle}
+                            aria-label={t.moveUpTitle}
+                            className="w-5 h-4 rounded bg-white/[0.04] hover:bg-[#e09f5a]/20 text-[#9ca3af] hover:text-[#e09f5a] disabled:opacity-25 disabled:pointer-events-none flex items-center justify-center border border-white/[0.08]"
+                          >
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!canDown}
+                            onClick={() => handleStepTopSong(idx, 1)}
+                            title={t.moveDownTitle}
+                            aria-label={t.moveDownTitle}
+                            className="w-5 h-4 rounded bg-white/[0.04] hover:bg-[#e09f5a]/20 text-[#9ca3af] hover:text-[#e09f5a] disabled:opacity-25 disabled:pointer-events-none flex items-center justify-center border border-white/[0.08]"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <span className="font-mono-num text-xs text-[#6b7280] w-5 text-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    {song.cover_url ? (
+                      <img
+                        src={song.cover_url}
+                        alt={song.title}
+                        className="w-10 h-10 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-[#1a1d27] shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-[#f3efe6] truncate flex items-center gap-1.5">
+                        {(song.best_of_releases?.length ?? 0) > 0 && (
+                          <Trophy className="w-3.5 h-3.5 text-[#f3c969] shrink-0" />
+                        )}
+                        <span className="truncate">
+                          {song.title}
+                          {song.version_tag && (
+                            <span className="ml-1.5 text-xs text-[#e09f5a]">({song.version_tag})</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[#9ca3af] truncate">
+                        {song.primary_release_title || song.category}
+                      </div>
                     </div>
-                    <div className="text-xs text-[#9ca3af] truncate">
-                      {song.primary_release_title || song.category}
-                    </div>
+                    <span className="font-mono-num text-sm font-bold text-[#5fb38e] px-2.5 py-1 rounded-lg bg-[#5fb38e]/10 border border-[#5fb38e]/25 shrink-0">
+                      {song.rating}
+                    </span>
                   </div>
-                  <span className="font-mono-num text-sm font-bold text-[#5fb38e] px-2.5 py-1 rounded-lg bg-[#5fb38e]/10 border border-[#5fb38e]/25">
-                    {song.rating}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -449,8 +559,15 @@ export function ArtistDashboardPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium text-[#f3efe6] truncate">{rel.title}</div>
-                    <div className="text-xs text-[#9ca3af]">
-                      {rel.category} • {rel.release_year || '—'}
+                    <div className="text-xs text-[#9ca3af] truncate flex items-center gap-1.5">
+                      <span>
+                        {rel.category} • {rel.release_year || '—'}
+                      </span>
+                      {rel.best_song_title && (
+                        <span className="inline-flex items-center gap-1 text-[#f3c969] truncate">
+                          • <Trophy className="w-3 h-3 shrink-0" /> {rel.best_song_title}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className="font-mono-num text-sm font-bold text-[#e09f5a] px-2.5 py-1 rounded-lg bg-[#e09f5a]/10 border border-[#e09f5a]/25">

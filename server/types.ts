@@ -104,6 +104,12 @@ export interface ImportJobStatus {
   error?: string;
 }
 
+export interface BestReleaseBadge {
+  id: number;
+  slug: string;
+  title: string;
+}
+
 export interface LinkedReleaseSummary {
   id: number;
   slug: string;
@@ -143,10 +149,12 @@ export interface SongDTO {
   verification_note: string | null;
   created_at: string;
   rating: number | null;
+  rank_order: number | null;
   rating_updated_at: string | null;
   note: string;
   note_updated_at: string | null;
   releases: LinkedReleaseSummary[];
+  best_of_releases: BestReleaseBadge[];
 }
 
 export interface ReleaseDTO {
@@ -174,6 +182,8 @@ export interface ReleaseDTO {
   track_count: number;
   rated_track_count: number;
   average_track_rating: number | null;
+  best_song_id: number | null;
+  best_song_title: string | null;
 }
 
 export interface ReleaseTrackDTO extends SongDTO {

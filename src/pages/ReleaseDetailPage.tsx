@@ -8,6 +8,7 @@ import {
   Info,
   ListMusic,
   Radio,
+  Trophy,
 } from 'lucide-react';
 import { api } from '../api';
 import { useArtist } from '../context/ArtistContext';
@@ -25,6 +26,7 @@ export function ReleaseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAlbumPlayer, setShowAlbumPlayer] = useState(false);
+  const [bestTrackBusyId, setBestTrackBusyId] = useState<number | null>(null);
 
   const loadRelease = useCallback(async () => {
     if (!idOrSlug) return;
@@ -79,19 +81,19 @@ export function ReleaseDetailPage() {
   ) => {
     setRelease((prev) => {
       if (!prev) return prev;
-      const tracks = prev.tracks.map((t) =>
-        t.id === songId
+      const tracks = prev.tracks.map((tr) =>
+        tr.id === songId
           ? {
-              ...t,
+              ...tr,
               ...(patch.rating !== undefined ? { rating: patch.rating } : {}),
               ...(patch.note !== undefined ? { note: patch.note } : {}),
             }
-          : t
+          : tr
       );
-      const rated = tracks.filter((t) => t.rating !== null);
+      const rated = tracks.filter((tr) => tr.rating !== null);
       const avg =
         rated.length > 0
-          ? Math.round((rated.reduce((sum, t) => sum + (t.rating || 0), 0) / rated.length) * 10) / 10
+          ? Math.round((rated.reduce((sum, tr) => sum + (tr.rating || 0), 0) / rated.length) * 10) / 10
           : null;
       return {
         ...prev,
@@ -101,6 +103,50 @@ export function ReleaseDetailPage() {
       };
     });
     void refreshArtists();
+  };
+
+  const handleToggleBestTrack = async (songId: number) => {
+    const nextSongId = release.best_song_id === songId ? null : songId;
+    setBestTrackBusyId(songId);
+    try {
+      const res = await api.setReleaseBestTrack(release.id, nextSongId);
+      setRelease((prev) => {
+        if (!prev) return prev;
+        const tracks = prev.tracks.map((tr) => {
+          const withoutCurrent = (tr.best_of_releases || []).filter((b) => b.id !== prev.id);
+          if (res.bestSongId === tr.id) {
+            return {
+              ...tr,
+              rating: res.songRating ?? 100,
+              best_of_releases: [
+                ...withoutCurrent,
+                { id: prev.id, slug: prev.slug, title: prev.title },
+              ],
+            };
+          }
+          return {
+            ...tr,
+            best_of_releases: withoutCurrent,
+          };
+        });
+        const rated = tracks.filter((tr) => tr.rating !== null);
+        const avg =
+          rated.length > 0
+            ? Math.round((rated.reduce((sum, tr) => sum + (tr.rating || 0), 0) / rated.length) * 10) / 10
+            : null;
+        return {
+          ...prev,
+          best_song_id: res.bestSongId,
+          best_song_title: res.bestSongTitle,
+          tracks,
+          rated_track_count: rated.length,
+          average_track_rating: avg,
+        };
+      });
+      void refreshArtists();
+    } finally {
+      setBestTrackBusyId(null);
+    }
   };
 
   return (
@@ -156,7 +202,7 @@ export function ReleaseDetailPage() {
                 {release.title}
               </h1>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-[#9ca3af]">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-[#9ca3af]">
                 <span className="inline-flex items-center gap-1.5 font-mono-num">
                   <Calendar className="w-4 h-4 text-[#6b7280]" />
                   {release.release_date || release.release_year || t.dateUnknown}
@@ -168,6 +214,14 @@ export function ReleaseDetailPage() {
                 {release.average_track_rating !== null && (
                   <span className="font-mono-num text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
                     {t.avgTrackScore} <strong className="text-[#f3efe6]">{release.average_track_rating}</strong>
+                  </span>
+                )}
+                {release.best_song_title && (
+                  <span className="text-xs px-2.5 py-1 rounded-lg bg-[#e09f5a]/15 border border-[#e09f5a]/35 text-[#f3c969] inline-flex items-center gap-1.5 font-semibold max-w-full">
+                    <Trophy className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {t.bestTrackOfLabel} {release.best_song_title}
+                    </span>
                   </span>
                 )}
               </div>
@@ -262,6 +316,10 @@ export function ReleaseDetailPage() {
               key={`${track.id}-${track.disc_number}-${track.track_number}`}
               song={track}
               trackNumber={track.track_number}
+              currentReleaseId={release.id}
+              isBestTrackOnCurrentRelease={release.best_song_id === track.id}
+              bestTrackBusy={bestTrackBusyId === track.id}
+              onToggleBestTrack={() => void handleToggleBestTrack(track.id)}
               onSongUpdated={handleSongUpdated}
             />
           ))}

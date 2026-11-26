@@ -58,13 +58,16 @@ export function ArtistDropdown() {
     totalAllSongs > 0 ? Math.round((ratedAllSongs / totalAllSongs) * 1000) / 10 : 0;
 
   return (
-    <div ref={containerRef} className="relative min-w-0 flex-1 sm:flex-initial">
+    <div
+      ref={containerRef}
+      className="relative min-w-0 flex-1 sm:flex-initial sm:w-auto sm:max-w-[220px] lg:max-w-[180px] xl:max-w-[220px]"
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="w-full sm:w-auto sm:max-w-[230px] lg:max-w-[195px] xl:max-w-[260px] flex items-center justify-between gap-1.5 sm:gap-2 pl-1.5 pr-2 sm:pr-2.5 py-1.5 rounded-xl bg-[#13151c] hover:bg-[#1a1d27] border border-white/10 hover:border-white/20 transition-all min-w-0"
+        className="w-full max-w-full overflow-hidden flex items-center justify-between gap-1.5 sm:gap-2 pl-1.5 pr-2 sm:pr-2.5 py-1.5 rounded-xl bg-[#13151c] hover:bg-[#1a1d27] border border-white/10 hover:border-white/20 transition-all min-w-0"
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {selectedArtist ? (

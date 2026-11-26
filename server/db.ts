@@ -242,6 +242,7 @@ async function createSchema(db: Db): Promise<void> {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       song_id INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
       rating INTEGER CHECK (rating IS NULL OR (rating >= 0 AND rating <= 100)),
+      rank_order INTEGER,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (user_id, song_id)
     );
@@ -253,6 +254,15 @@ async function createSchema(db: Db): Promise<void> {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (user_id, release_id)
     );
+
+    CREATE TABLE IF NOT EXISTS release_best_tracks (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      release_id INTEGER NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+      song_id INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, release_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_release_best_tracks_user_song ON release_best_tracks(user_id, song_id);
 
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -390,6 +400,12 @@ async function createSchema(db: Db): Promise<void> {
     await db.exec('ALTER TABLE users ADD COLUMN slug TEXT;');
   }
   await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_slug ON users(slug);');
+
+  const srCols = await db.all<{ name: string }>('PRAGMA table_info(song_ratings)');
+  const srColNames = new Set(srCols.map((c) => c.name));
+  if (!srColNames.has('rank_order')) {
+    await db.exec('ALTER TABLE song_ratings ADD COLUMN rank_order INTEGER;');
+  }
 
   const missingSlugUsers = await db.all<{ id: number; display_name: string }>(
     `SELECT id, display_name FROM users WHERE slug IS NULL OR slug = '' ORDER BY id ASC`

@@ -18,6 +18,12 @@ import { usePreferences } from '../context/PreferencesContext';
 import type { GlobalStatsResponse } from '../types';
 import { SongRow } from '../components/SongRow';
 import { ReleaseCard } from '../components/ReleaseCard';
+import {
+  canMoveWithinSameRating,
+  hasAnyTiedRating,
+  reorderWithinSameRating,
+  stepMoveWithinSameRating,
+} from '../utils/reorderSameScore';
 
 export function ArtistsHubPage() {
   const { setSelectedArtistId, refreshArtists, openAddModal } = useArtist();
@@ -31,6 +37,8 @@ export function ArtistsHubPage() {
   const [syncProgress, setSyncProgress] = useState<{ percent: number; stage: string } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [dragSongId, setDragSongId] = useState<number | null>(null);
+  const [dragOverSongId, setDragOverSongId] = useState<number | null>(null);
 
   const loadGlobal = useCallback(async () => {
     try {
@@ -330,18 +338,76 @@ export function ArtistsHubPage() {
                 {t.noRatedSongsGlobal}
               </div>
             ) : (
-              stats.globalTopSongs.map((song, idx) => (
-                <SongRow
-                  key={song.id}
-                  song={song}
-                  trackNumber={idx + 1}
-                  showArtist
-                  onSongUpdated={() => {
-                    void loadGlobal();
-                    void refreshArtists();
-                  }}
-                />
-              ))
+              <>
+                {hasAnyTiedRating(stats.globalTopSongs) && (
+                  <p className="text-xs text-[#9ca3af] px-1">{t.reorderSameScoreHint}</p>
+                )}
+                {stats.globalTopSongs.map((song, idx) => {
+                  const { canUp, canDown } = canMoveWithinSameRating(stats.globalTopSongs, idx);
+                  const dragged = stats.globalTopSongs.find((s) => s.id === dragSongId);
+                  const acceptsDrop = Boolean(
+                    dragged && dragged.rating === song.rating && dragged.id !== song.id
+                  );
+                  return (
+                    <SongRow
+                      key={song.id}
+                      song={song}
+                      trackNumber={idx + 1}
+                      showArtist
+                      canMoveUp={canUp}
+                      canMoveDown={canDown}
+                      onMoveUp={() => {
+                        const res = stepMoveWithinSameRating(stats.globalTopSongs, idx, -1);
+                        if (!res) return;
+                        setStats((prev) =>
+                          prev ? { ...prev, globalTopSongs: res.nextList } : prev
+                        );
+                        void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+                      }}
+                      onMoveDown={() => {
+                        const res = stepMoveWithinSameRating(stats.globalTopSongs, idx, 1);
+                        if (!res) return;
+                        setStats((prev) =>
+                          prev ? { ...prev, globalTopSongs: res.nextList } : prev
+                        );
+                        void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+                      }}
+                      isDragging={dragSongId === song.id}
+                      isDragOver={dragOverSongId === song.id && acceptsDrop}
+                      onDragStartRow={() => setDragSongId(song.id)}
+                      onDragOverRow={(e) => {
+                        if (!acceptsDrop) return;
+                        e.preventDefault();
+                        setDragOverSongId(song.id);
+                      }}
+                      onDropRow={(e) => {
+                        e.preventDefault();
+                        if (dragSongId === null) return;
+                        const res = reorderWithinSameRating(
+                          stats.globalTopSongs,
+                          dragSongId,
+                          song.id
+                        );
+                        setDragSongId(null);
+                        setDragOverSongId(null);
+                        if (!res) return;
+                        setStats((prev) =>
+                          prev ? { ...prev, globalTopSongs: res.nextList } : prev
+                        );
+                        void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+                      }}
+                      onDragEndRow={() => {
+                        setDragSongId(null);
+                        setDragOverSongId(null);
+                      }}
+                      onSongUpdated={() => {
+                        void loadGlobal();
+                        void refreshArtists();
+                      }}
+                    />
+                  );
+                })}
+              </>
             )}
           </div>
         )}

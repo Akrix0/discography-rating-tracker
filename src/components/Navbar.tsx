@@ -11,14 +11,14 @@ export function Navbar() {
   const { t } = usePreferences();
 
   const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-1.5 px-2.5 xl:px-3 py-2 rounded-lg text-xs xl:text-sm font-medium whitespace-nowrap transition-all shrink-0 ${
+    `flex items-center gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-lg text-xs xl:text-[13px] font-medium whitespace-nowrap transition-all shrink-0 ${
       isActive
         ? 'bg-[#d95d4e]/15 text-[#f3efe6] border border-[#d95d4e]/40 shadow-[0_0_20px_rgba(217,93,78,0.12)]'
         : 'text-[#9ca3af] hover:text-[#f3efe6] hover:bg-white/5 border border-transparent'
     }`;
 
   const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 px-0.5 sm:px-2.5 md:px-3 py-1.5 rounded-lg text-[9.5px] min-[380px]:text-[10px] sm:text-xs font-medium leading-none sm:leading-tight transition-all min-w-0 ${
+    `flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 px-0.5 sm:px-2.5 md:px-3 py-1.5 rounded-lg text-[9.5px] min-[380px]:text-[10px] sm:text-xs font-medium leading-none sm:leading-tight transition-all min-w-0 overflow-hidden ${
       isActive
         ? 'bg-[#d95d4e]/15 text-[#f3efe6] border border-[#d95d4e]/40'
         : 'text-[#9ca3af] hover:text-[#f3efe6] hover:bg-white/5 border border-transparent'
@@ -45,19 +45,17 @@ export function Navbar() {
           aria-label="Primary navigation"
           className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0"
         >
-          <NavLink to="/artists" className={desktopLinkClass}>
+          <NavLink to="/artists" title={t.navArtists} className={desktopLinkClass}>
             <Users className="w-4 h-4 shrink-0" />
-            <span className="xl:hidden">{t.navArtistsShort}</span>
-            <span className="hidden xl:inline">{t.navArtists}</span>
+            <span>{t.navArtistsShort}</span>
           </NavLink>
           <NavLink to="/" end className={desktopLinkClass}>
             <BarChart3 className="w-4 h-4 shrink-0" />
             <span>{t.navOverview}</span>
           </NavLink>
-          <NavLink to="/songs" className={desktopLinkClass}>
+          <NavLink to="/songs" title={t.navSongs} className={desktopLinkClass}>
             <Music2 className="w-4 h-4 shrink-0" />
-            <span className="xl:hidden">{t.navSongsShort}</span>
-            <span className="hidden xl:inline">{t.navSongs}</span>
+            <span>{t.navSongsShort}</span>
           </NavLink>
           <NavLink to="/releases" className={desktopLinkClass}>
             <Disc3 className="w-4 h-4 shrink-0" />
@@ -67,20 +65,20 @@ export function Navbar() {
             <HeartHandshake className="w-4 h-4 shrink-0" />
             <span>{t.navFriends}</span>
           </NavLink>
-          <NavLink to="/settings" title={t.navSettings} className={desktopLinkClass}>
+          <NavLink to="/settings" title={t.navSettings} aria-label={t.navSettings} className={desktopLinkClass}>
             <Settings className="w-4 h-4 shrink-0" />
-            <span className="hidden xl:inline">{t.navSettings}</span>
+            <span className="hidden xl:inline">{t.navSettingsShort}</span>
           </NavLink>
         </nav>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {user?.isAdmin && (
             <NavLink
               to="/admin"
               title={t.navAdmin}
               aria-label={t.navAdmin}
               className={({ isActive }) =>
-                `h-8 px-2 2xl:px-2.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shrink-0 ${
+                `w-8 h-8 rounded-lg border inline-flex items-center justify-center transition-colors shrink-0 ${
                   isActive
                     ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
                     : 'bg-[#13151c] text-[#9ca3af] hover:text-[#f3efe6] border-white/10 hover:bg-white/10'
@@ -91,7 +89,6 @@ export function Navbar() {
                 <Activity className="w-4 h-4 shrink-0 text-[#5fb38e]" />
                 <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#5fb38e]" />
               </span>
-              <span className="hidden 2xl:inline whitespace-nowrap">{t.navAdmin}</span>
             </NavLink>
           )}
 
@@ -100,7 +97,7 @@ export function Navbar() {
           {user && <NotificationBell />}
 
           {user && (
-            <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 sm:pl-1.5 sm:pr-1 sm:py-0.5 rounded-xl bg-[#13151c] border border-white/[0.08]">
+            <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 sm:pl-1.5 sm:pr-1 sm:py-0.5 rounded-xl bg-[#13151c] border border-white/[0.08] min-w-0 shrink-0">
               <NavLink
                 to="/profile"
                 title={t.navProfile}
@@ -122,7 +119,7 @@ export function Navbar() {
                     {user.displayName.slice(0, 1)}
                   </div>
                 )}
-                <span className="hidden 2xl:inline text-xs font-medium max-w-[96px] truncate">
+                <span className="hidden xl:inline text-xs font-medium max-w-[84px] truncate">
                   {user.displayName}
                 </span>
               </NavLink>

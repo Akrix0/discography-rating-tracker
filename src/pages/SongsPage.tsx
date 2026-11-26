@@ -19,6 +19,12 @@ import {
   setEmbedLoadMode,
   type EmbedLoadMode,
 } from '../components/SpotifyEmbed';
+import {
+  canMoveWithinSameRating,
+  hasAnyTiedRating,
+  reorderWithinSameRating,
+  stepMoveWithinSameRating,
+} from '../utils/reorderSameScore';
 
 export function SongsPage() {
   const { selectedArtistId, selectedArtist, refreshArtists } = useArtist();
@@ -33,6 +39,8 @@ export function SongsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [embedMode, setEmbedModeState] = useState<EmbedLoadMode>(getEmbedLoadMode);
+  const [dragSongId, setDragSongId] = useState<number | null>(null);
+  const [dragOverSongId, setDragOverSongId] = useState<number | null>(null);
 
   const [filters, setFilters] = useState<FilterState>(() => {
     const catParam = searchParams.get('category');
@@ -226,14 +234,67 @@ export function SongsPage() {
         </div>
       ) : (
         <div className={`space-y-3 transition-opacity duration-200 ${isRefreshing ? 'opacity-75' : 'opacity-100'}`}>
-          {visibleSongs.map((song) => (
-            <SongRow
-              key={song.id}
-              song={song}
-              showArtist={!selectedArtist}
-              onSongUpdated={handleSongUpdated}
-            />
-          ))}
+          {filters.sortBy === 'rating' &&
+            filters.sortDir === 'desc' &&
+            hasAnyTiedRating(visibleSongs) && (
+              <p className="text-xs text-[#9ca3af] px-1">{t.reorderSameScoreHint}</p>
+            )}
+          {visibleSongs.map((song, idx) => {
+            const canReorderMode = filters.sortBy === 'rating' && filters.sortDir === 'desc';
+            const globalIdx = startIdx + idx;
+            const { canUp, canDown } = canReorderMode
+              ? canMoveWithinSameRating(songs, globalIdx)
+              : { canUp: false, canDown: false };
+            const dragged = songs.find((s) => s.id === dragSongId);
+            const acceptsDrop = Boolean(
+              canReorderMode && dragged && dragged.rating === song.rating && dragged.id !== song.id
+            );
+
+            return (
+              <SongRow
+                key={song.id}
+                song={song}
+                showArtist={!selectedArtist}
+                canMoveUp={canUp}
+                canMoveDown={canDown}
+                onMoveUp={() => {
+                  const res = stepMoveWithinSameRating(songs, globalIdx, -1);
+                  if (!res) return;
+                  setSongs(res.nextList);
+                  void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+                }}
+                onMoveDown={() => {
+                  const res = stepMoveWithinSameRating(songs, globalIdx, 1);
+                  if (!res) return;
+                  setSongs(res.nextList);
+                  void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+                }}
+                isDragging={dragSongId === song.id}
+                isDragOver={dragOverSongId === song.id && acceptsDrop}
+                onDragStartRow={() => setDragSongId(song.id)}
+                onDragOverRow={(e) => {
+                  if (!acceptsDrop) return;
+                  e.preventDefault();
+                  setDragOverSongId(song.id);
+                }}
+                onDropRow={(e) => {
+                  e.preventDefault();
+                  if (!canReorderMode || dragSongId === null) return;
+                  const res = reorderWithinSameRating(songs, dragSongId, song.id);
+                  setDragSongId(null);
+                  setDragOverSongId(null);
+                  if (!res) return;
+                  setSongs(res.nextList);
+                  void api.reorderSongsByRating(res.rating, res.orderedIdsForRating);
+                }}
+                onDragEndRow={() => {
+                  setDragSongId(null);
+                  setDragOverSongId(null);
+                }}
+                onSongUpdated={handleSongUpdated}
+              />
+            );
+          })}
         </div>
       )}
 
