@@ -11,7 +11,9 @@ import {
 import {
   extractSpotifyArtistId,
   fetchJsonWithRetry,
+  fetchWikidataSpotifyAlbumIds,
   resolveCandidateFromSpotifyId,
+  resolveWikidataArtist,
   searchArtistCandidates,
 } from './artistSearch.ts';
 import { fetchFullArtistCatalogSpotifyApi, hasSpotifyCredentials } from './spotifyApi.ts';
@@ -353,20 +355,35 @@ async function executeJob(
     }
 
     updateJob({ percent: 12, stage: 'Визначення профілю та ідентифікаторів виконавця…' });
-    if (spotifyId && (!artistName || !mbId || !deezerId)) {
-      const resolved = await resolveCandidateFromSpotifyId(db, spotifyId, req.userId);
-      artistName = artistName || resolved.name;
-      imageUrl = imageUrl || resolved.imageUrl;
-      mbId = mbId || resolved.mbId;
-      deezerId = deezerId || resolved.deezerId;
-    } else if (artistName && !spotifyId && !deezerId && !mbId) {
-      const cands = await searchArtistCandidates(db, artistName, req.userId);
-      if (cands[0]) {
-        artistName = cands[0].name;
-        spotifyId = spotifyId || cands[0].spotifyId;
-        mbId = mbId || cands[0].mbId;
-        deezerId = deezerId || cands[0].deezerId;
-        imageUrl = imageUrl || cands[0].imageUrl;
+    let wikidataId: string | null = null;
+
+    if (artistName && (!spotifyId || !mbId)) {
+      const wd = await resolveWikidataArtist(artistName);
+      wikidataId = wd.wikidataId;
+      spotifyId = spotifyId || wd.spotifyId;
+      mbId = mbId || wd.mbId;
+    }
+
+    if (spotifyId && (!artistName || !mbId || !deezerId || !imageUrl)) {
+      const resolved = await resolveCandidateFromSpotifyId(db, spotifyId, req.userId).catch(() => null);
+      if (resolved) {
+        artistName = artistName || resolved.name;
+        imageUrl = imageUrl || resolved.imageUrl;
+        mbId = mbId || resolved.mbId;
+        deezerId = deezerId || resolved.deezerId;
+      }
+    }
+
+    if (artistName && (!spotifyId || !deezerId || !mbId)) {
+      const cands = await searchArtistCandidates(db, artistName, req.userId).catch(() => []);
+      const normTarget = normalizeTitle(artistName);
+      const best = cands.find((c) => normalizeTitle(c.name) === normTarget) || cands[0];
+      if (best) {
+        artistName = artistName || best.name;
+        spotifyId = spotifyId || best.spotifyId;
+        mbId = mbId || best.mbId;
+        deezerId = deezerId || best.deezerId;
+        imageUrl = imageUrl || best.imageUrl;
       }
     }
 
@@ -440,6 +457,14 @@ async function executeJob(
           }
         } catch {
           // continue
+        }
+      }
+
+      if (wikidataId) {
+        updateJob({ percent: 26, stage: 'Пошук альбомів Spotify у базі Wikidata…' });
+        const wdAlbIds = await fetchWikidataSpotifyAlbumIds(wikidataId);
+        for (const id of wdAlbIds) {
+          spotifyAlbumIds.add(id);
         }
       }
 
@@ -818,7 +843,7 @@ async function persistArtistCatalog(
 
   for (const r of existingRels) {
     if (r.spotify_id) relBySp.set(r.spotify_id, Number(r.id));
-    relByTitle.set(r.title.toLowerCase(), { id: Number(r.id), spotify_id: r.spotify_id });
+    relByTitle.set(normalizeTitle(r.title), { id: Number(r.id), spotify_id: r.spotify_id });
   }
 
   const existingSongs = await db.all<{ id: number; canonical_key: string; spotify_id: string | null }>(
@@ -834,17 +859,29 @@ async function persistArtistCatalog(
 
   for (const rel of sortedReleases) {
     let releaseId: number | null = null;
+    const normRelTitle = normalizeTitle(rel.title);
     if (rel.spotify_id && relBySp.has(rel.spotify_id)) {
       releaseId = relBySp.get(rel.spotify_id)!;
-    } else if (relByTitle.has(rel.title.toLowerCase())) {
-      const foundTitle = relByTitle.get(rel.title.toLowerCase())!;
+    } else if (relByTitle.has(normRelTitle)) {
+      const foundTitle = relByTitle.get(normRelTitle)!;
       releaseId = foundTitle.id;
       if (!foundTitle.spotify_id && rel.spotify_id) {
         await db.run(
           `UPDATE releases SET spotify_id = ?, spotify_url = ?, cover_url = COALESCE(cover_url, ?),
-           release_date = COALESCE(release_date, ?), release_year = COALESCE(release_year, ?) WHERE id = ?`,
-          [rel.spotify_id, rel.spotify_url, rel.cover_url, rel.release_date, rel.release_year, releaseId]
+           release_date = COALESCE(release_date, ?), release_year = COALESCE(release_year, ?),
+           is_verified = 1, verification_note = COALESCE(?, verification_note) WHERE id = ?`,
+          [
+            rel.spotify_id,
+            rel.spotify_url,
+            rel.cover_url,
+            rel.release_date,
+            rel.release_year,
+            rel.verification_note,
+            releaseId,
+          ]
         );
+        foundTitle.spotify_id = rel.spotify_id;
+        relBySp.set(rel.spotify_id, releaseId);
       }
     }
 
@@ -881,7 +918,7 @@ async function persistArtistCatalog(
       );
       releaseId = insRel.lastInsertRowid;
       if (rel.spotify_id) relBySp.set(rel.spotify_id, releaseId);
-      relByTitle.set(rel.title.toLowerCase(), { id: releaseId, spotify_id: rel.spotify_id });
+      relByTitle.set(normalizeTitle(rel.title), { id: releaseId, spotify_id: rel.spotify_id });
       addedReleases++;
     }
 
@@ -898,9 +935,15 @@ async function persistArtistCatalog(
         if (!existingSong.spotify_id && track.spotify_id) {
           await db.run(
             `UPDATE songs SET spotify_id = ?, spotify_url = ?, is_verified = 1,
+             verification_note = 'Перевірено через Spotify',
              cover_url = COALESCE(cover_url, ?), duration_ms = COALESCE(duration_ms, ?)
              WHERE id = ? AND spotify_id IS NULL`,
             [track.spotify_id, track.spotify_url, rel.cover_url, track.duration_ms, songId]
+          );
+          await db.run(
+            `UPDATE release_songs SET spotify_track_id_on_release = ?
+             WHERE release_id = ? AND song_id = ? AND spotify_track_id_on_release IS NULL`,
+            [track.spotify_id, releaseId, songId]
           );
           existingSong.spotify_id = track.spotify_id;
         }

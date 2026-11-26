@@ -84,6 +84,7 @@ export function ProfilePage() {
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
 
   const bioRef = useRef<HTMLTextAreaElement | null>(null);
+  const hasAutoPickedTabRef = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -106,6 +107,12 @@ export function ProfilePage() {
       const data = await api.getSocialOverview();
       setSocial(data);
       setPrivacy(data.privacy);
+      if (!hasAutoPickedTabRef.current) {
+        hasAutoPickedTabRef.current = true;
+        if (data.friends.length === 0 && data.followers.length === 0) {
+          setActiveTab('search');
+        }
+      }
     } finally {
       setLoadingSocial(false);
     }

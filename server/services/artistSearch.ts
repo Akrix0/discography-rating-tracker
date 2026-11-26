@@ -32,6 +32,93 @@ function normalizeName(str: string): string {
     .trim();
 }
 
+const WIKIDATA_UA = 'UniversalDiscographyTracker/2.0 (https://github.com)';
+
+export interface WikidataArtistMatch {
+  wikidataId: string | null;
+  name: string | null;
+  spotifyId: string | null;
+  mbId: string | null;
+}
+
+export async function resolveWikidataArtist(query: string): Promise<WikidataArtistMatch> {
+  const empty: WikidataArtistMatch = { wikidataId: null, name: null, spotifyId: null, mbId: null };
+  const q = query.trim();
+  if (!q) return empty;
+  try {
+    const searchRes = await fetch(
+      `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(q)}&language=en&limit=6&format=json`,
+      { headers: { 'User-Agent': WIKIDATA_UA } }
+    );
+    if (!searchRes.ok) return empty;
+    const searchData = (await searchRes.json()) as {
+      search?: { id: string; label?: string }[];
+    };
+    const ids = (searchData.search || []).map((s) => s.id).filter(Boolean);
+    if (!ids.length) return empty;
+
+    const entRes = await fetch(
+      `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ids.join('|')}&props=claims|labels&format=json`,
+      { headers: { 'User-Agent': WIKIDATA_UA } }
+    );
+    if (!entRes.ok) return empty;
+    const entData = (await entRes.json()) as {
+      entities?: Record<
+        string,
+        {
+          labels?: { en?: { value?: string } };
+          claims?: {
+            P1902?: { mainsnak?: { datavalue?: { value?: string } } }[];
+            P434?: { mainsnak?: { datavalue?: { value?: string } } }[];
+          };
+        }
+      >;
+    };
+
+    const normQ = normalizeName(q);
+    for (const id of ids) {
+      const entity = entData.entities?.[id];
+      if (!entity) continue;
+      const spId = entity.claims?.P1902?.[0]?.mainsnak?.datavalue?.value || null;
+      const mbId = entity.claims?.P434?.[0]?.mainsnak?.datavalue?.value || null;
+      if (!spId && !mbId) continue;
+      const label = entity.labels?.en?.value || '';
+      const normLabel = normalizeName(label);
+      if (normLabel === normQ || !normQ || normLabel.includes(normQ) || normQ.includes(normLabel)) {
+        return { wikidataId: id, name: label || q, spotifyId: spId, mbId };
+      }
+    }
+    return empty;
+  } catch {
+    return empty;
+  }
+}
+
+export async function fetchWikidataSpotifyAlbumIds(wikidataId: string): Promise<string[]> {
+  if (!/^Q\d+$/.test(wikidataId)) return [];
+  try {
+    const sparql = `SELECT ?spAlb WHERE { ?item wdt:P175 wd:${wikidataId} ; wdt:P2205 ?spAlb . }`;
+    const res = await fetch(
+      `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`,
+      { headers: { 'User-Agent': WIKIDATA_UA } }
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      results?: { bindings?: { spAlb?: { value?: string } }[] };
+    };
+    const ids = new Set<string>();
+    for (const b of data.results?.bindings || []) {
+      const val = b.spAlb?.value?.trim();
+      if (val && /^[a-zA-Z0-9]{22}$/.test(val)) {
+        ids.add(val);
+      }
+    }
+    return [...ids];
+  } catch {
+    return [];
+  }
+}
+
 export async function searchArtistCandidates(
   db: Db,
   rawQuery: string,
@@ -108,6 +195,37 @@ export async function searchArtistCandidates(
   );
 
   tasks.push(
+    resolveWikidataArtist(query)
+      .then(async (wd) => {
+        if (!wd.spotifyId && !wd.mbId) return;
+        let spImage: string | null = null;
+        if (wd.spotifyId) {
+          try {
+            const oembed = await fetchJsonWithRetry<{ thumbnail_url?: string }>(
+              `https://open.spotify.com/oembed?url=https://open.spotify.com/artist/${wd.spotifyId}`
+            );
+            spImage = oembed.thumbnail_url || null;
+          } catch {
+            spImage = null;
+          }
+        }
+        upsertCandidate({
+          name: wd.name || query,
+          imageUrl: spImage,
+          spotifyId: wd.spotifyId,
+          spotifyUrl: wd.spotifyId ? `https://open.spotify.com/artist/${wd.spotifyId}` : null,
+          mbId: wd.mbId,
+          deezerId: null,
+          itunesId: null,
+          albumCountHint: null,
+          disambiguation: wd.spotifyId ? 'Wikidata • Spotify' : 'Wikidata',
+          source: 'wikidata',
+        });
+      })
+      .catch(() => {})
+  );
+
+  tasks.push(
     fetchJsonWithRetry<{
       artists?: {
         id: string;
@@ -117,12 +235,12 @@ export async function searchArtistCandidates(
       }[];
     }>(`https://musicbrainz.org/ws/2/artist?query=artist:${encodeURIComponent(`"${query}"`)}&limit=4&fmt=json`)
       .then(async (mb) => {
-        const list = (mb.artists || []).slice(0, 3);
+        const list = (mb.artists || []).slice(0, 2);
         for (const a of list) {
           let spId: string | null = null;
           let dzId: string | null = null;
           try {
-            await sleep(900);
+            await sleep(700);
             const det = await fetchJsonWithRetry<{
               relations?: { url?: { resource?: string } }[];
             }>(`https://musicbrainz.org/ws/2/artist/${a.id}?inc=url-rels&fmt=json`);

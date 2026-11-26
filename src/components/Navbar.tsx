@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Activity, BarChart3, Disc3, LogOut, Music2, Settings, Users } from 'lucide-react';
+import { Activity, BarChart3, Disc3, HeartHandshake, LogOut, Music2, Settings, Users } from 'lucide-react';
 import { ArtistDropdown } from './ArtistDropdown';
 import { PreferencesToggle } from './PreferencesToggle';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +17,7 @@ export function Navbar() {
     }`;
 
   const mobileLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 px-0.5 sm:px-2.5 md:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium leading-none sm:leading-tight transition-all min-w-0 ${
+    `flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 px-0.5 sm:px-2.5 md:px-3 py-1.5 rounded-lg text-[9.5px] min-[380px]:text-[10px] sm:text-xs font-medium leading-none sm:leading-tight transition-all min-w-0 ${
       isActive
         ? 'bg-[#d95d4e]/15 text-[#f3efe6] border border-[#d95d4e]/40'
         : 'text-[#9ca3af] hover:text-[#f3efe6] hover:bg-white/5 border border-transparent'
@@ -61,6 +61,10 @@ export function Navbar() {
           <NavLink to="/releases" className={desktopLinkClass}>
             <Disc3 className="w-4 h-4 shrink-0" />
             <span>{t.navReleases}</span>
+          </NavLink>
+          <NavLink to="/profile" className={desktopLinkClass}>
+            <HeartHandshake className="w-4 h-4 shrink-0" />
+            <span>{t.navFriends}</span>
           </NavLink>
           <NavLink to="/settings" title={t.navSettings} className={desktopLinkClass}>
             <Settings className="w-4 h-4 shrink-0" />
@@ -138,7 +142,7 @@ export function Navbar() {
         aria-label="Mobile navigation"
         className="lg:hidden border-t border-white/[0.06]"
       >
-        <div className="max-w-7xl mx-auto px-1.5 sm:px-6 py-1 grid grid-cols-5 gap-0.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-1.5">
+        <div className="max-w-7xl mx-auto px-1 sm:px-6 py-1 grid grid-cols-6 gap-0.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-1.5">
           <NavLink to="/artists" className={mobileLinkClass}>
             <Users className="w-4 h-4 shrink-0" />
             <span className="md:hidden truncate max-w-full">{t.navArtistsShort}</span>
@@ -146,7 +150,8 @@ export function Navbar() {
           </NavLink>
           <NavLink to="/" end className={mobileLinkClass}>
             <BarChart3 className="w-4 h-4 shrink-0" />
-            <span className="truncate max-w-full md:whitespace-nowrap">{t.navOverview}</span>
+            <span className="md:hidden truncate max-w-full">{t.navOverviewShort}</span>
+            <span className="hidden md:inline whitespace-nowrap">{t.navOverview}</span>
           </NavLink>
           <NavLink to="/songs" className={mobileLinkClass}>
             <Music2 className="w-4 h-4 shrink-0" />
@@ -155,7 +160,12 @@ export function Navbar() {
           </NavLink>
           <NavLink to="/releases" className={mobileLinkClass}>
             <Disc3 className="w-4 h-4 shrink-0" />
-            <span className="truncate max-w-full md:whitespace-nowrap">{t.navReleases}</span>
+            <span className="md:hidden truncate max-w-full">{t.navReleasesShort}</span>
+            <span className="hidden md:inline whitespace-nowrap">{t.navReleases}</span>
+          </NavLink>
+          <NavLink to="/profile" className={mobileLinkClass}>
+            <HeartHandshake className="w-4 h-4 shrink-0" />
+            <span className="truncate max-w-full md:whitespace-nowrap">{t.navFriends}</span>
           </NavLink>
           <NavLink to="/settings" className={mobileLinkClass}>
             <Settings className="w-4 h-4 shrink-0" />
