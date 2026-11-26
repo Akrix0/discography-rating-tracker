@@ -51,7 +51,12 @@ export function FriendsPage() {
 
   useEffect(() => {
     void loadSocial();
-  }, [loadSocial]);
+    const onSocialUpdated = () => {
+      void Promise.all([loadSocial(), runSearch(searchQuery)]);
+    };
+    window.addEventListener('dtr:social-updated', onSocialUpdated);
+    return () => window.removeEventListener('dtr:social-updated', onSocialUpdated);
+  }, [loadSocial, runSearch, searchQuery]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -69,6 +74,7 @@ export function FriendsPage() {
         await api.followUser(person.slug || person.id);
       }
       await Promise.all([loadSocial(), runSearch(searchQuery)]);
+      window.dispatchEvent(new CustomEvent('dtr:social-updated'));
     } finally {
       setBusyUserId(null);
     }

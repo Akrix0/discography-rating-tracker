@@ -9,6 +9,7 @@ export interface AuthUser {
   bio: string;
   ratingsVisibility: VisibilityMode;
   notesVisibility: VisibilityMode;
+  connectionsVisibility: VisibilityMode;
   createdAt: string;
   isAdmin?: boolean;
 }
@@ -386,8 +387,10 @@ export interface PublicUserCard {
 export interface PrivacySettings {
   ratingsVisibility: VisibilityMode;
   notesVisibility: VisibilityMode;
+  connectionsVisibility: VisibilityMode;
   selectedRatingsFriendIds: number[];
   selectedNotesFriendIds: number[];
+  selectedConnectionsFriendIds: number[];
 }
 
 export interface SocialOverviewResponse {
@@ -395,6 +398,19 @@ export interface SocialOverviewResponse {
   followers: PublicUserCard[];
   following: PublicUserCard[];
   privacy: PrivacySettings;
+}
+
+export interface NotificationItem {
+  id: number;
+  type: 'new_follower' | 'became_friends';
+  isRead: boolean;
+  createdAt: string;
+  actor: PublicUserCard;
+}
+
+export interface NotificationsResponse {
+  unreadCount: number;
+  notifications: NotificationItem[];
 }
 
 export interface PublicRatedSong {
@@ -438,6 +454,7 @@ export interface PublicUserProfileResponse {
     bio: string;
     ratingsVisibility: VisibilityMode;
     notesVisibility: VisibilityMode;
+    connectionsVisibility: VisibilityMode;
     createdAt: string;
   };
   counts: {
@@ -452,6 +469,12 @@ export interface PublicUserProfileResponse {
   };
   canViewRatings: boolean;
   canViewNotes: boolean;
+  canViewConnections: boolean;
+  connections: {
+    friends: PublicUserCard[];
+    followers: PublicUserCard[];
+    following: PublicUserCard[];
+  };
   artists: {
     id: number;
     name: string;

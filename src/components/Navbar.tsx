@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { Activity, BarChart3, Disc3, HeartHandshake, LogOut, Music2, Settings, Users } from 'lucide-react';
 import { ArtistDropdown } from './ArtistDropdown';
+import { NotificationBell } from './NotificationBell';
 import { PreferencesToggle } from './PreferencesToggle';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -72,7 +73,7 @@ export function Navbar() {
           </NavLink>
         </nav>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {user?.isAdmin && (
             <NavLink
               to="/admin"
@@ -95,6 +96,8 @@ export function Navbar() {
           )}
 
           <PreferencesToggle />
+
+          {user && <NotificationBell />}
 
           {user && (
             <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 sm:pl-1.5 sm:pr-1 sm:py-0.5 rounded-xl bg-[#13151c] border border-white/[0.08]">

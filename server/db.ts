@@ -323,12 +323,43 @@ async function createSchema(db: Db): Promise<void> {
     CREATE TABLE IF NOT EXISTS user_privacy_allowlist (
       owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      scope TEXT NOT NULL CHECK (scope IN ('ratings', 'notes')),
+      scope TEXT NOT NULL CHECK (scope IN ('ratings', 'notes', 'connections')),
       created_at TEXT NOT NULL,
       PRIMARY KEY (owner_id, viewer_id, scope)
     );
     CREATE INDEX IF NOT EXISTS idx_allowlist_owner_scope ON user_privacy_allowlist(owner_id, scope);
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      actor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('new_follower', 'became_friends')),
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, is_read, created_at);
   `);
+
+  // Migrate existing user_privacy_allowlist tables whose CHECK constraint lacked 'connections'
+  const allowDdl = await db.get<{ sql: string }>(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'user_privacy_allowlist'"
+  );
+  if (allowDdl?.sql && !allowDdl.sql.includes("'connections'")) {
+    await db.exec(`
+      CREATE TABLE user_privacy_allowlist_v2 (
+        owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        scope TEXT NOT NULL CHECK (scope IN ('ratings', 'notes', 'connections')),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (owner_id, viewer_id, scope)
+      );
+      INSERT INTO user_privacy_allowlist_v2 (owner_id, viewer_id, scope, created_at)
+      SELECT owner_id, viewer_id, scope, created_at FROM user_privacy_allowlist;
+      DROP TABLE user_privacy_allowlist;
+      ALTER TABLE user_privacy_allowlist_v2 RENAME TO user_privacy_allowlist;
+      CREATE INDEX IF NOT EXISTS idx_allowlist_owner_scope ON user_privacy_allowlist(owner_id, scope);
+    `);
+  }
 
   const userCols = await db.all<{ name: string }>('PRAGMA table_info(users)');
   const colNames = new Set(userCols.map((c) => c.name));
@@ -349,6 +380,11 @@ async function createSchema(db: Db): Promise<void> {
   }
   if (!colNames.has('notes_visibility')) {
     await db.exec("ALTER TABLE users ADD COLUMN notes_visibility TEXT NOT NULL DEFAULT 'nobody';");
+  }
+  if (!colNames.has('connections_visibility')) {
+    await db.exec(
+      "ALTER TABLE users ADD COLUMN connections_visibility TEXT NOT NULL DEFAULT 'everyone';"
+    );
   }
   if (!colNames.has('slug')) {
     await db.exec('ALTER TABLE users ADD COLUMN slug TEXT;');

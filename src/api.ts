@@ -8,6 +8,7 @@ import type {
   GlobalStatsResponse,
   ImportJobStatus,
   ImportPreferences,
+  NotificationsResponse,
   PrivacySettings,
   PublicUserCard,
   PublicUserProfileResponse,
@@ -200,6 +201,12 @@ export const api = {
     request<PublicUserProfileResponse>(
       `/api/social/users/${encodeURIComponent(String(idOrSlug))}`
     ),
+  getNotifications: () => request<NotificationsResponse>('/api/social/notifications'),
+  markNotificationsRead: (id?: number) =>
+    request<{ ok: boolean; unreadCount: number }>('/api/social/notifications/read', {
+      method: 'POST',
+      body: JSON.stringify(id ? { id } : {}),
+    }),
 };
 
 export function formatDuration(ms: number | null): string {

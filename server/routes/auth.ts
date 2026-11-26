@@ -55,6 +55,7 @@ function mapUserRow(r: Record<string, unknown>): UserDTO {
     bio: r.bio ? String(r.bio) : '',
     ratingsVisibility: parseVisibility(r.ratings_visibility, 'everyone'),
     notesVisibility: parseVisibility(r.notes_visibility, 'nobody'),
+    connectionsVisibility: parseVisibility(r.connections_visibility, 'everyone'),
     createdAt: String(r.created_at),
     isAdmin: isStrictAdminRow(r),
   };

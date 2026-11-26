@@ -122,6 +122,11 @@ html.light .text-\[\#7cc9a7\] {
   color: #1f7a52 !important;
 }
 
+html.light .text-\[\#9ec0e8\],
+html.light .text-\[\#7fa8d9\] {
+  color: #2b5c99 !important;
+}
+
 html.light .border-white\/10,
 html.light .border-white\/12,
 html.light .border-white\/15,

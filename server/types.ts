@@ -9,6 +9,7 @@ export interface UserDTO {
   bio: string;
   ratingsVisibility: VisibilityMode;
   notesVisibility: VisibilityMode;
+  connectionsVisibility: VisibilityMode;
   createdAt: string;
   isAdmin: boolean;
 }

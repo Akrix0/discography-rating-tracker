@@ -72,8 +72,10 @@ export function ProfilePage() {
   const [privacy, setPrivacy] = useState<PrivacySettings>({
     ratingsVisibility: user?.ratingsVisibility || 'everyone',
     notesVisibility: user?.notesVisibility || 'nobody',
+    connectionsVisibility: user?.connectionsVisibility || 'everyone',
     selectedRatingsFriendIds: [],
     selectedNotesFriendIds: [],
+    selectedConnectionsFriendIds: [],
   });
   const [savingPrivacy, setSavingPrivacy] = useState(false);
   const [privacyMsg, setPrivacyMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -122,6 +124,11 @@ export function ProfilePage() {
 
   useEffect(() => {
     void loadSocial();
+    const onSocialUpdated = () => {
+      void loadSocial();
+    };
+    window.addEventListener('dtr:social-updated', onSocialUpdated);
+    return () => window.removeEventListener('dtr:social-updated', onSocialUpdated);
   }, [loadSocial]);
 
   const runSearch = useCallback(async (q: string) => {
@@ -196,9 +203,17 @@ export function ProfilePage() {
     }
   };
 
-  const toggleFriendSelection = (scope: 'ratings' | 'notes', friendId: number) => {
+  const toggleFriendSelection = (
+    scope: 'ratings' | 'notes' | 'connections',
+    friendId: number
+  ) => {
     setPrivacy((prev) => {
-      const key = scope === 'ratings' ? 'selectedRatingsFriendIds' : 'selectedNotesFriendIds';
+      const key =
+        scope === 'ratings'
+          ? 'selectedRatingsFriendIds'
+          : scope === 'notes'
+          ? 'selectedNotesFriendIds'
+          : 'selectedConnectionsFriendIds';
       const exists = prev[key].includes(friendId);
       return {
         ...prev,
@@ -220,6 +235,7 @@ export function ProfilePage() {
       if (activeTab === 'search') {
         await runSearch(searchQuery);
       }
+      window.dispatchEvent(new CustomEvent('dtr:social-updated'));
     } finally {
       setBusyUserId(null);
     }
@@ -502,122 +518,104 @@ export function ProfilePage() {
           <p className="text-xs sm:text-sm text-[#9ca3af] mt-1">{t.privacySub}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Ratings Privacy */}
-          <div className="rounded-xl bg-[#0b0c10]/70 border border-white/[0.07] p-4 space-y-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[#f3efe6]">
-              <Eye className="w-4 h-4 text-[#e09f5a] shrink-0" />
-              <span>{t.whoCanSeeRatings}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {visibilityOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => {
-                    setPrivacy((p) => ({ ...p, ratingsVisibility: opt.key }));
-                    setPrivacyMsg(null);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-colors ${
-                    privacy.ratingsVisibility === opt.key
-                      ? 'bg-[#e09f5a]/20 text-[#e09f5a] border-[#e09f5a]/50'
-                      : 'bg-white/[0.03] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {privacy.ratingsVisibility === 'selected' && (
-              <div className="pt-2 border-t border-white/[0.06] space-y-2">
-                <div className="text-[11px] text-[#9ca3af]">{t.selectFriendsLabel}</div>
-                {friends.length === 0 ? (
-                  <p className="text-xs text-[#6b7280]">{t.noMutualFriendsForSelect}</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-                    {friends.map((fr) => {
-                      const checked = privacy.selectedRatingsFriendIds.includes(fr.id);
-                      return (
-                        <button
-                          key={fr.id}
-                          type="button"
-                          onClick={() => toggleFriendSelection('ratings', fr.id)}
-                          className={`px-2.5 py-1 rounded-full text-xs border inline-flex items-center gap-1.5 transition-colors ${
-                            checked
-                              ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
-                              : 'bg-white/[0.03] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
-                          }`}
-                        >
-                          {checked && <Check className="w-3 h-3" />}
-                          <span>{fr.displayName}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {(
+            [
+              {
+                scope: 'ratings' as const,
+                title: t.whoCanSeeRatings,
+                icon: <Eye className="w-4 h-4 text-[#e09f5a] shrink-0" />,
+                mode: privacy.ratingsVisibility,
+                selectedIds: privacy.selectedRatingsFriendIds,
+                activeClass: 'bg-[#e09f5a]/20 text-[#e09f5a] border-[#e09f5a]/50',
+                onSelect: (mode: VisibilityMode) => {
+                  setPrivacy((p) => ({ ...p, ratingsVisibility: mode }));
+                  setPrivacyMsg(null);
+                },
+              },
+              {
+                scope: 'notes' as const,
+                title: t.whoCanSeeNotes,
+                icon: <MessageSquare className="w-4 h-4 text-[#d95d4e] shrink-0" />,
+                mode: privacy.notesVisibility,
+                selectedIds: privacy.selectedNotesFriendIds,
+                activeClass: 'bg-[#d95d4e]/20 text-[#e87c6f] border-[#d95d4e]/50',
+                onSelect: (mode: VisibilityMode) => {
+                  setPrivacy((p) => ({ ...p, notesVisibility: mode }));
+                  setPrivacyMsg(null);
+                },
+              },
+              {
+                scope: 'connections' as const,
+                title: t.whoCanSeeConnections,
+                icon: <Users className="w-4 h-4 text-[#7fa8d9] shrink-0" />,
+                mode: privacy.connectionsVisibility,
+                selectedIds: privacy.selectedConnectionsFriendIds,
+                activeClass: 'bg-[#7fa8d9]/20 text-[#9ec0e8] border-[#7fa8d9]/50',
+                onSelect: (mode: VisibilityMode) => {
+                  setPrivacy((p) => ({ ...p, connectionsVisibility: mode }));
+                  setPrivacyMsg(null);
+                },
+              },
+            ] as const
+          ).map((card) => (
+            <div
+              key={card.scope}
+              className="rounded-xl bg-[#0b0c10]/70 border border-white/[0.07] p-4 space-y-3"
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#f3efe6]">
+                {card.icon}
+                <span>{card.title}</span>
               </div>
-            )}
-          </div>
 
-          {/* Notes Privacy */}
-          <div className="rounded-xl bg-[#0b0c10]/70 border border-white/[0.07] p-4 space-y-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[#f3efe6]">
-              <MessageSquare className="w-4 h-4 text-[#d95d4e] shrink-0" />
-              <span>{t.whoCanSeeNotes}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {visibilityOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => {
-                    setPrivacy((p) => ({ ...p, notesVisibility: opt.key }));
-                    setPrivacyMsg(null);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-colors ${
-                    privacy.notesVisibility === opt.key
-                      ? 'bg-[#d95d4e]/20 text-[#e87c6f] border-[#d95d4e]/50'
-                      : 'bg-white/[0.03] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {privacy.notesVisibility === 'selected' && (
-              <div className="pt-2 border-t border-white/[0.06] space-y-2">
-                <div className="text-[11px] text-[#9ca3af]">{t.selectFriendsLabel}</div>
-                {friends.length === 0 ? (
-                  <p className="text-xs text-[#6b7280]">{t.noMutualFriendsForSelect}</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-                    {friends.map((fr) => {
-                      const checked = privacy.selectedNotesFriendIds.includes(fr.id);
-                      return (
-                        <button
-                          key={fr.id}
-                          type="button"
-                          onClick={() => toggleFriendSelection('notes', fr.id)}
-                          className={`px-2.5 py-1 rounded-full text-xs border inline-flex items-center gap-1.5 transition-colors ${
-                            checked
-                              ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
-                              : 'bg-white/[0.03] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
-                          }`}
-                        >
-                          {checked && <Check className="w-3 h-3" />}
-                          <span>{fr.displayName}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-2">
+                {visibilityOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => card.onSelect(opt.key)}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-colors ${
+                      card.mode === opt.key
+                        ? card.activeClass
+                        : 'bg-white/[0.03] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
+
+              {card.mode === 'selected' && (
+                <div className="pt-2 border-t border-white/[0.06] space-y-2">
+                  <div className="text-[11px] text-[#9ca3af]">{t.selectFriendsLabel}</div>
+                  {friends.length === 0 ? (
+                    <p className="text-xs text-[#6b7280]">{t.noMutualFriendsForSelect}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                      {friends.map((fr) => {
+                        const checked = card.selectedIds.includes(fr.id);
+                        return (
+                          <button
+                            key={fr.id}
+                            type="button"
+                            onClick={() => toggleFriendSelection(card.scope, fr.id)}
+                            className={`px-2.5 py-1 rounded-full text-xs border inline-flex items-center gap-1.5 transition-colors ${
+                              checked
+                                ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
+                                : 'bg-white/[0.03] text-[#9ca3af] border-white/10 hover:text-[#f3efe6]'
+                            }`}
+                          >
+                            {checked && <Check className="w-3 h-3" />}
+                            <span>{fr.displayName}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
