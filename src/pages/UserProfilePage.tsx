@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
+  Check,
+  Copy,
   Disc3,
   ExternalLink,
   Eye,
@@ -21,8 +23,7 @@ import { CATEGORY_LABELS } from '../i18n/translations';
 import type { Category, PublicUserProfileResponse } from '../types';
 
 export function UserProfilePage() {
-  const { id } = useParams();
-  const targetId = Number(id);
+  const { idOrSlug } = useParams();
   const { user } = useAuth();
   const { t, lang } = usePreferences();
 
@@ -30,20 +31,22 @@ export function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followBusy, setFollowBusy] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   const [tab, setTab] = useState<'songs' | 'releases'>('songs');
   const [artistFilter, setArtistFilter] = useState<number | 'all'>('all');
   const [q, setQ] = useState('');
 
   const loadProfile = useCallback(async () => {
-    if (!Number.isInteger(targetId) || targetId <= 0) {
-      setError('Invalid user ID');
+    const key = (idOrSlug || '').trim();
+    if (!key) {
+      setError('Invalid user profile');
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const res = await api.getUserProfile(targetId);
+      const res = await api.getUserProfile(key);
       setData(res);
       setError(null);
     } catch (err) {
@@ -51,13 +54,18 @@ export function UserProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [targetId, t.errorText]);
+  }, [idOrSlug, t.errorText]);
 
   useEffect(() => {
     void loadProfile();
   }, [loadProfile]);
 
-  if (user && targetId === user.id) {
+  if (
+    user &&
+    (idOrSlug === String(user.id) ||
+      idOrSlug?.toLowerCase() === user.slug?.toLowerCase() ||
+      (data && data.profile.id === user.id))
+  ) {
     return <Navigate to="/profile" replace />;
   }
 
@@ -65,10 +73,11 @@ export function UserProfilePage() {
     if (!data) return;
     setFollowBusy(true);
     try {
+      const key = data.profile.slug || data.profile.id;
       if (data.relationship.iFollow) {
-        await api.unfollowUser(data.profile.id);
+        await api.unfollowUser(key);
       } else {
-        await api.followUser(data.profile.id);
+        await api.followUser(key);
       }
       await loadProfile();
     } finally {
@@ -116,7 +125,7 @@ export function UserProfilePage() {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-5xl">
       <div>
-        <Link to="/profile" className="text-xs sm:text-sm text-[#9ca3af] hover:text-[#f3efe6] transition-colors">
+        <Link to="/friends" className="text-xs sm:text-sm text-[#9ca3af] hover:text-[#f3efe6] transition-colors">
           {t.backToMyProfile}
         </Link>
       </div>
@@ -139,6 +148,21 @@ export function UserProfilePage() {
               <h1 className="font-display text-xl sm:text-3xl font-bold text-[#f3efe6] break-words">
                 {profile.displayName}
               </h1>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`${window.location.origin}/users/${profile.slug || profile.id}`);
+                    setCopiedUrl(true);
+                    window.setTimeout(() => setCopiedUrl(false), 2000);
+                  } catch {}
+                }}
+                className="px-2 py-0.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 font-mono-num text-[11px] text-[#9ca3af] hover:text-[#e09f5a] inline-flex items-center gap-1 transition-colors"
+                title={t.copyMyLinkBtn}
+              >
+                {copiedUrl ? <Check className="w-3 h-3 text-[#5fb38e]" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedUrl ? t.linkCopiedText : `@${profile.slug || profile.id}`}</span>
+              </button>
               {relationship.isFriend ? (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#5fb38e]/15 text-[#5fb38e] border border-[#5fb38e]/30 inline-flex items-center gap-1">
                   <HeartHandshake className="w-3.5 h-3.5" />

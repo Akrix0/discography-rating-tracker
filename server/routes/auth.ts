@@ -1,5 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
-import { attachDefaultArtistsForUser, type Db } from '../db.ts';
+import { allocateUniqueUserSlug, attachDefaultArtistsForUser, type Db } from '../db.ts';
 import {
   createRateLimiter,
   DUMMY_SCRYPT_HASH,
@@ -10,6 +10,7 @@ import {
   isStrictAdminRow,
   sanitizeAvatarInput,
   sha256Hex,
+  slugifyNickname,
   verifyPassword,
 } from '../services/security.ts';
 import type { UserDTO, VisibilityMode } from '../types.ts';
@@ -47,6 +48,7 @@ function parseVisibility(raw: unknown, fallback: VisibilityMode): VisibilityMode
 function mapUserRow(r: Record<string, unknown>): UserDTO {
   return {
     id: Number(r.id),
+    slug: r.slug ? String(r.slug) : slugifyNickname(String(r.display_name || '')),
     email: String(r.email),
     displayName: String(r.display_name),
     avatarUrl: r.avatar_url ? String(r.avatar_url) : null,
@@ -183,6 +185,8 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
     );
 
     const userId = ins.lastInsertRowid;
+    const slug = await allocateUniqueUserSlug(db, displayName.slice(0, 60), userId);
+    await db.run('UPDATE users SET slug = ? WHERE id = ?', [slug, userId]);
     if (Number(userId) === getAdminUserId() && email === getAdminEmail()) {
       await db.run('UPDATE users SET is_admin = 1 WHERE id = ?', [userId]);
     }
@@ -294,10 +298,19 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
         res.status(400).json({ error: 'Нікнейм не може бути порожнім.' });
         return;
       }
-      await db.run(`UPDATE users SET display_name = ?, updated_at = datetime('now') WHERE id = ?`, [
-        displayName.slice(0, 60),
-        userId,
-      ]);
+      const clippedName = displayName.slice(0, 60);
+      const nextSlug = await allocateUniqueUserSlug(db, clippedName, userId);
+      await db.run(
+        `UPDATE users SET display_name = ?, slug = ?, updated_at = datetime('now') WHERE id = ?`,
+        [clippedName, nextSlug, userId]
+      );
+    } else if (!userRow.slug) {
+      const fallbackSlug = await allocateUniqueUserSlug(
+        db,
+        String(userRow.display_name || ''),
+        userId
+      );
+      await db.run(`UPDATE users SET slug = ? WHERE id = ?`, [fallbackSlug, userId]);
     }
 
     if (bio !== undefined) {

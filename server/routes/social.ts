@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Db } from '../db.ts';
 import { requireAuth } from './auth.ts';
-import { decryptText } from '../services/security.ts';
+import { decryptText, slugifyNickname } from '../services/security.ts';
 import type { VisibilityMode } from '../types.ts';
 
 const VALID_VISIBILITIES = new Set<VisibilityMode>(['everyone', 'friends', 'selected', 'nobody']);
@@ -53,11 +53,36 @@ async function evaluateScopeAccess(
   return Boolean(hit);
 }
 
+async function resolveTargetUser(db: Db, rawParam: unknown) {
+  const rawStr = Array.isArray(rawParam) ? rawParam[0] : rawParam;
+  let decoded = '';
+  try {
+    decoded = decodeURIComponent(String(rawStr || ''));
+  } catch {
+    decoded = String(rawStr || '');
+  }
+  const clean = decoded.trim().replace(/^@/, '');
+  if (!clean) return undefined;
+
+  const cols = `id, slug, display_name, avatar_url, bio, ratings_visibility, notes_visibility, created_at`;
+  if (/^\d+$/.test(clean)) {
+    const byId = await db.get<Record<string, unknown>>(`SELECT ${cols} FROM users WHERE id = ?`, [
+      Number(clean),
+    ]);
+    if (byId) return byId;
+  }
+  return db.get<Record<string, unknown>>(
+    `SELECT ${cols} FROM users WHERE lower(slug) = lower(?)`,
+    [clean]
+  );
+}
+
 function mapPublicUserCard(r: Record<string, unknown>) {
   const iFollow = Boolean(Number(r.i_follow || 0));
   const followsMe = Boolean(Number(r.follows_me || 0));
   return {
     id: Number(r.id),
+    slug: r.slug ? String(r.slug) : slugifyNickname(String(r.display_name || '')),
     displayName: String(r.display_name),
     avatarUrl: r.avatar_url ? String(r.avatar_url) : null,
     bio: r.bio ? String(r.bio) : '',
@@ -78,7 +103,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
     const [relationRows, userRow, allowRows] = await Promise.all([
       db.all<Record<string, unknown>>(
         `SELECT
-          u.id, u.display_name, u.avatar_url, u.bio, u.created_at,
+          u.id, u.slug, u.display_name, u.avatar_url, u.bio, u.created_at,
           EXISTS(SELECT 1 FROM user_follows f1 WHERE f1.follower_id = ? AND f1.following_id = u.id) AS i_follow,
           EXISTS(SELECT 1 FROM user_follows f2 WHERE f2.follower_id = u.id AND f2.following_id = ?) AS follows_me
          FROM users u
@@ -127,47 +152,72 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
   router.get('/search', requireAuth, async (req, res) => {
     const db = await getDbFn();
     const userId = req.user!.id;
-    const q = String(req.query.q || '').trim().toLowerCase();
+    const rawQ = String(req.query.q || '').trim();
+    const urlMatch = rawQ.match(/\/users\/([^/?#]+)/i);
+    let cleanQ = rawQ;
+    if (urlMatch) {
+      try {
+        cleanQ = decodeURIComponent(urlMatch[1]);
+      } catch {
+        cleanQ = urlMatch[1];
+      }
+    }
+    cleanQ = cleanQ.trim().replace(/^@/, '');
 
-    const rows = q
+    const hasAlnum = /[a-z0-9\u0400-\u04ff]/i.test(cleanQ);
+    const translitSlug = hasAlnum ? slugifyNickname(cleanQ) : '';
+
+    const rows = cleanQ
       ? await db.all<Record<string, unknown>>(
           `SELECT
-            u.id, u.display_name, u.avatar_url, u.bio, u.created_at,
+            u.id, u.slug, u.display_name, u.avatar_url, u.bio, u.created_at,
             EXISTS(SELECT 1 FROM user_follows f1 WHERE f1.follower_id = ? AND f1.following_id = u.id) AS i_follow,
             EXISTS(SELECT 1 FROM user_follows f2 WHERE f2.follower_id = u.id AND f2.following_id = ?) AS follows_me
            FROM users u
-           WHERE u.id != ? AND lower(u.display_name) LIKE ?
+           WHERE u.id != ?
+             AND (
+               lower(u.display_name) LIKE ?
+               OR lower(COALESCE(u.slug, '')) LIKE ?
+               OR (? != '' AND lower(COALESCE(u.slug, '')) LIKE ?)
+             )
            ORDER BY lower(u.display_name) ASC
            LIMIT 25`,
-          [userId, userId, userId, `%${q}%`]
+          [
+            userId,
+            userId,
+            userId,
+            `%${cleanQ.toLowerCase()}%`,
+            `%${cleanQ.toLowerCase()}%`,
+            translitSlug,
+            `%${translitSlug}%`,
+          ]
         )
       : await db.all<Record<string, unknown>>(
           `SELECT
-            u.id, u.display_name, u.avatar_url, u.bio, u.created_at,
+            u.id, u.slug, u.display_name, u.avatar_url, u.bio, u.created_at,
             EXISTS(SELECT 1 FROM user_follows f1 WHERE f1.follower_id = ? AND f1.following_id = u.id) AS i_follow,
             EXISTS(SELECT 1 FROM user_follows f2 WHERE f2.follower_id = u.id AND f2.following_id = ?) AS follows_me
            FROM users u
            WHERE u.id != ?
            ORDER BY COALESCE(u.last_seen_at, u.created_at) DESC
-           LIMIT 20`,
+           LIMIT 24`,
           [userId, userId, userId]
         );
 
     res.json({ users: rows.map(mapPublicUserCard) });
   });
 
-  router.post('/follow/:targetId', requireAuth, async (req, res) => {
+  router.post('/follow/:idOrSlug', requireAuth, async (req, res) => {
     const db = await getDbFn();
     const userId = req.user!.id;
-    const targetId = Number(req.params.targetId);
-    if (!Number.isInteger(targetId) || targetId <= 0 || targetId === userId) {
-      res.status(400).json({ error: 'Некоректний користувач.' });
+    const targetRow = await resolveTargetUser(db, req.params.idOrSlug);
+    if (!targetRow) {
+      res.status(404).json({ error: 'Користувача не знайдено.' });
       return;
     }
-
-    const exists = await db.get<{ id: number }>('SELECT id FROM users WHERE id = ?', [targetId]);
-    if (!exists) {
-      res.status(404).json({ error: 'Користувача не знайдено.' });
+    const targetId = Number(targetRow.id);
+    if (targetId === userId) {
+      res.status(400).json({ error: 'Неможливо підписатися на себе.' });
       return;
     }
 
@@ -180,11 +230,16 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
     res.json({ ok: true, relationship });
   });
 
-  router.delete('/follow/:targetId', requireAuth, async (req, res) => {
+  router.delete('/follow/:idOrSlug', requireAuth, async (req, res) => {
     const db = await getDbFn();
     const userId = req.user!.id;
-    const targetId = Number(req.params.targetId);
-    if (!Number.isInteger(targetId) || targetId <= 0 || targetId === userId) {
+    const targetRow = await resolveTargetUser(db, req.params.idOrSlug);
+    if (!targetRow) {
+      res.status(404).json({ error: 'Користувача не знайдено.' });
+      return;
+    }
+    const targetId = Number(targetRow.id);
+    if (targetId === userId) {
       res.status(400).json({ error: 'Некоректний користувач.' });
       return;
     }
@@ -275,24 +330,15 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
     });
   });
 
-  router.get('/users/:targetId', requireAuth, async (req, res) => {
+  router.get('/users/:idOrSlug', requireAuth, async (req, res) => {
     const db = await getDbFn();
     const viewerId = req.user!.id;
-    const targetId = Number(req.params.targetId);
-    if (!Number.isInteger(targetId) || targetId <= 0) {
-      res.status(400).json({ error: 'Некоректний ID користувача.' });
-      return;
-    }
-
-    const ownerRow = await db.get<Record<string, unknown>>(
-      `SELECT id, display_name, avatar_url, bio, ratings_visibility, notes_visibility, created_at
-       FROM users WHERE id = ?`,
-      [targetId]
-    );
+    const ownerRow = await resolveTargetUser(db, req.params.idOrSlug);
     if (!ownerRow) {
       res.status(404).json({ error: 'Користувача не знайдено.' });
       return;
     }
+    const targetId = Number(ownerRow.id);
 
     const relationship = await getRelationship(db, viewerId, targetId);
     const ratingsMode = parseVisibility(ownerRow.ratings_visibility, 'everyone');
@@ -314,6 +360,7 @@ export function createSocialRouter(getDbFn: () => Promise<Db>) {
 
     const profile = {
       id: Number(ownerRow.id),
+      slug: ownerRow.slug ? String(ownerRow.slug) : slugifyNickname(String(ownerRow.display_name || '')),
       displayName: String(ownerRow.display_name),
       avatarUrl: ownerRow.avatar_url ? String(ownerRow.avatar_url) : null,
       bio: ownerRow.bio ? String(ownerRow.bio) : '',

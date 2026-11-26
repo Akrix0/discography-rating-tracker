@@ -2,6 +2,7 @@ export type VisibilityMode = 'everyone' | 'friends' | 'selected' | 'nobody';
 
 export interface UserDTO {
   id: number;
+  slug: string;
   email: string;
   displayName: string;
   avatarUrl: string | null;

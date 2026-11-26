@@ -62,7 +62,7 @@ export function Navbar() {
             <Disc3 className="w-4 h-4 shrink-0" />
             <span>{t.navReleases}</span>
           </NavLink>
-          <NavLink to="/profile" className={desktopLinkClass}>
+          <NavLink to="/friends" className={desktopLinkClass}>
             <HeartHandshake className="w-4 h-4 shrink-0" />
             <span>{t.navFriends}</span>
           </NavLink>
@@ -163,7 +163,7 @@ export function Navbar() {
             <span className="md:hidden truncate max-w-full">{t.navReleasesShort}</span>
             <span className="hidden md:inline whitespace-nowrap">{t.navReleases}</span>
           </NavLink>
-          <NavLink to="/profile" className={mobileLinkClass}>
+          <NavLink to="/friends" className={mobileLinkClass}>
             <HeartHandshake className="w-4 h-4 shrink-0" />
             <span className="truncate max-w-full md:whitespace-nowrap">{t.navFriends}</span>
           </NavLink>

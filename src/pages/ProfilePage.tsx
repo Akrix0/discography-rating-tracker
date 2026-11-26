@@ -5,6 +5,7 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  Copy,
   Eye,
   HeartHandshake,
   Loader2,
@@ -82,6 +83,7 @@ export function ProfilePage() {
   const [searchResults, setSearchResults] = useState<PublicUserCard[]>([]);
   const [searching, setSearching] = useState(false);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
+  const [copiedMySlug, setCopiedMySlug] = useState(false);
 
   const bioRef = useRef<HTMLTextAreaElement | null>(null);
   const hasAutoPickedTabRef = useRef(false);
@@ -236,13 +238,14 @@ export function ProfilePage() {
 
   const renderUserCard = (person: PublicUserCard) => {
     const busy = busyUserId === person.id;
+    const profilePath = `/users/${person.slug || person.id}`;
     return (
       <div
         key={person.id}
         className="rounded-xl bg-[#0b0c10]/70 border border-white/[0.07] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
       >
         <div className="flex items-start gap-3 min-w-0">
-          <Link to={`/users/${person.id}`} className="shrink-0">
+          <Link to={profilePath} className="shrink-0">
             {person.avatarUrl ? (
               <img
                 src={person.avatarUrl}
@@ -259,11 +262,14 @@ export function ProfilePage() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <Link
-                to={`/users/${person.id}`}
+                to={profilePath}
                 className="font-semibold text-sm text-[#f3efe6] hover:text-[#e09f5a] truncate transition-colors"
               >
                 {person.displayName}
               </Link>
+              <span className="font-mono-num text-[11px] text-[#6b7280] truncate">
+                @{person.slug}
+              </span>
               {person.isFriend ? (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#5fb38e]/15 text-[#5fb38e] border border-[#5fb38e]/30 inline-flex items-center gap-1">
                   <HeartHandshake className="w-3 h-3" />
@@ -287,7 +293,7 @@ export function ProfilePage() {
 
         <div className="flex items-center gap-2 shrink-0">
           <Link
-            to={`/users/${person.id}`}
+            to={profilePath}
             className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs font-medium text-[#f3efe6] inline-flex items-center justify-center transition-colors"
           >
             {t.openProfileBtn}
@@ -333,15 +339,28 @@ export function ProfilePage() {
           <p className="text-xs sm:text-sm text-[#9ca3af] mt-1">{t.profileSub}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono-num shrink-0">
-          <span className="px-2.5 py-1 rounded-full bg-[#5fb38e]/15 text-[#5fb38e] border border-[#5fb38e]/30">
-            {friends.length} {t.tabFriends.toLowerCase()}
-          </span>
-          <span className="px-2.5 py-1 rounded-full bg-white/[0.05] text-[#d1d5db] border border-white/10">
-            {followers.length + friends.length} {t.tabFollowers.toLowerCase()}
-          </span>
-          <span className="px-2.5 py-1 rounded-full bg-white/[0.05] text-[#d1d5db] border border-white/10">
-            {following.length + friends.length} {t.tabFollowing.toLowerCase()}
-          </span>
+          {user?.slug && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${window.location.origin}/users/${user.slug}`);
+                  setCopiedMySlug(true);
+                  window.setTimeout(() => setCopiedMySlug(false), 2000);
+                } catch {}
+              }}
+              className="px-2.5 py-1 rounded-full bg-[#e09f5a]/15 hover:bg-[#e09f5a]/25 text-[#e09f5a] border border-[#e09f5a]/30 inline-flex items-center gap-1 transition-colors"
+            >
+              {copiedMySlug ? <Check className="w-3 h-3 text-[#5fb38e]" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedMySlug ? t.linkCopiedText : `/users/${user.slug}`}</span>
+            </button>
+          )}
+          <Link
+            to="/friends"
+            className="px-2.5 py-1 rounded-full bg-[#d95d4e] hover:bg-[#c84d3e] text-white font-semibold transition-colors"
+          >
+            {t.goToFriendsSearchBtn}
+          </Link>
         </div>
       </div>
 
@@ -674,7 +693,7 @@ export function ProfilePage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.searchPeoplePlaceholder}
+              placeholder={t.searchPeopleBySlugPlaceholder}
               className="w-full h-10 pl-10 pr-4 rounded-xl bg-[#0b0c10] border border-white/10 text-sm text-[#f3efe6] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]"
             />
           </div>

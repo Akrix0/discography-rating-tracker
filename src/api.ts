@@ -181,14 +181,14 @@ export const api = {
   getSocialOverview: () => request<SocialOverviewResponse>('/api/social/overview'),
   searchUsers: (q: string) =>
     request<{ users: PublicUserCard[] }>(`/api/social/search?q=${encodeURIComponent(q)}`),
-  followUser: (targetId: number) =>
+  followUser: (idOrSlug: number | string) =>
     request<{ ok: boolean; relationship: { iFollow: boolean; followsMe: boolean; isFriend: boolean } }>(
-      `/api/social/follow/${targetId}`,
+      `/api/social/follow/${encodeURIComponent(String(idOrSlug))}`,
       { method: 'POST' }
     ),
-  unfollowUser: (targetId: number) =>
+  unfollowUser: (idOrSlug: number | string) =>
     request<{ ok: boolean; relationship: { iFollow: boolean; followsMe: boolean; isFriend: boolean } }>(
-      `/api/social/follow/${targetId}`,
+      `/api/social/follow/${encodeURIComponent(String(idOrSlug))}`,
       { method: 'DELETE' }
     ),
   updatePrivacy: (payload: PrivacySettings) =>
@@ -196,8 +196,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(payload),
     }),
-  getUserProfile: (targetId: number) =>
-    request<PublicUserProfileResponse>(`/api/social/users/${targetId}`),
+  getUserProfile: (idOrSlug: number | string) =>
+    request<PublicUserProfileResponse>(
+      `/api/social/users/${encodeURIComponent(String(idOrSlug))}`
+    ),
 };
 
 export function formatDuration(ms: number | null): string {

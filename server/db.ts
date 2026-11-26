@@ -8,6 +8,7 @@ import {
   encryptText,
   getAdminEmail,
   getAdminUserId,
+  slugifyNickname,
 } from './services/security.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -349,6 +350,18 @@ async function createSchema(db: Db): Promise<void> {
   if (!colNames.has('notes_visibility')) {
     await db.exec("ALTER TABLE users ADD COLUMN notes_visibility TEXT NOT NULL DEFAULT 'nobody';");
   }
+  if (!colNames.has('slug')) {
+    await db.exec('ALTER TABLE users ADD COLUMN slug TEXT;');
+  }
+  await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_slug ON users(slug);');
+
+  const missingSlugUsers = await db.all<{ id: number; display_name: string }>(
+    `SELECT id, display_name FROM users WHERE slug IS NULL OR slug = '' ORDER BY id ASC`
+  );
+  for (const u of missingSlugUsers) {
+    const allocated = await allocateUniqueUserSlug(db, u.display_name, Number(u.id));
+    await db.run('UPDATE users SET slug = ? WHERE id = ?', [allocated, Number(u.id)]);
+  }
 
   // Strictly enforce admin flag for the single configured owner account only
   await db.run(
@@ -498,6 +511,29 @@ async function seedMotherMotherIfEmpty(db: Db): Promise<void> {
   }
   await db.batch(linkStmts);
   console.log(`[DB] Seeded Mother Mother (${relRows.length} releases, ${songRows.length} songs).`);
+}
+
+export async function allocateUniqueUserSlug(
+  db: Db,
+  displayName: string,
+  excludeUserId?: number
+): Promise<string> {
+  const base = slugifyNickname(displayName);
+  let candidate = base;
+  let suffix = 2;
+  while (true) {
+    const row = excludeUserId
+      ? await db.get<{ id: number }>(
+          'SELECT id FROM users WHERE lower(slug) = lower(?) AND id != ?',
+          [candidate, excludeUserId]
+        )
+      : await db.get<{ id: number }>(
+          'SELECT id FROM users WHERE lower(slug) = lower(?)',
+          [candidate]
+        );
+    if (!row) return candidate;
+    candidate = `${base}-${suffix++}`;
+  }
 }
 
 export async function attachDefaultArtistsForUser(db: Db, userId: number): Promise<void> {

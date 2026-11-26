@@ -2,6 +2,7 @@ export type VisibilityMode = 'everyone' | 'friends' | 'selected' | 'nobody';
 
 export interface AuthUser {
   id: number;
+  slug: string;
   email: string;
   displayName: string;
   avatarUrl: string | null;
@@ -372,6 +373,7 @@ export interface AdminAnalyticsResponse {
 
 export interface PublicUserCard {
   id: number;
+  slug: string;
   displayName: string;
   avatarUrl: string | null;
   bio: string;
@@ -430,6 +432,7 @@ export interface PublicRatedRelease {
 export interface PublicUserProfileResponse {
   profile: {
     id: number;
+    slug: string;
     displayName: string;
     avatarUrl: string | null;
     bio: string;

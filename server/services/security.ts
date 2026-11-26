@@ -211,3 +211,37 @@ export function isStrictAdminRow(row: Record<string, unknown> | undefined | null
 export function hashIpForAnalytics(ip: string): string {
   return sha256Hex(`dtr-analytics-ip:${ip}`).slice(0, 16);
 }
+
+const CYRILLIC_MAP: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ye',
+  ж: 'zh', з: 'z', и: 'y', і: 'i', ї: 'yi', й: 'y', к: 'k', л: 'l',
+  м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u',
+  ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch', ь: '',
+  ю: 'yu', я: 'ya', ы: 'y', э: 'e', ё: 'yo', ъ: '',
+};
+
+/**
+ * Generates an ASCII URL-safe slug from any nickname with Ukrainian/Cyrillic transliteration.
+ * Never returns pure digits so slugs never collide with numeric user IDs.
+ */
+export function slugifyNickname(raw: string): string {
+  const lower = String(raw || '').trim().toLowerCase();
+  let transliterated = '';
+  for (const ch of lower) {
+    transliterated += Object.prototype.hasOwnProperty.call(CYRILLIC_MAP, ch)
+      ? CYRILLIC_MAP[ch]
+      : ch;
+  }
+  const slug = transliterated
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 42)
+    .replace(/-+$/g, '');
+
+  if (!slug) return 'user';
+  if (/^\d+$/.test(slug)) return `u-${slug}`;
+  return slug;
+}
