@@ -9,6 +9,7 @@ import { getDb, getUserSetting, ROOT_DIR, setUserSetting, type Db } from './db.t
 import { importCatalogData } from './importer.ts';
 import { createAdminRouter, createPresenceRouter } from './routes/admin.ts';
 import { attachUserMiddleware, createAuthRouter, requireAuth } from './routes/auth.ts';
+import { createSocialRouter } from './routes/social.ts';
 import { searchArtistCandidates } from './services/artistSearch.ts';
 import { getJobStatus, startArtistImportJob } from './services/catalogBuilder.ts';
 import { createRateLimiter, csrfProtection, decryptText, encryptText } from './services/security.ts';
@@ -300,8 +301,9 @@ app.get('/api/health', async (_req, res) => {
   res.json({ ok: true, ...counts });
 });
 
-// Auth & Analytics routes
+// Auth, Social & Analytics routes
 app.use('/api/auth', createAuthRouter(getDb));
+app.use('/api/social', createSocialRouter(getDb));
 app.use('/api/presence', createPresenceRouter(getDb));
 app.use('/api/admin', createAdminRouter(getDb));
 

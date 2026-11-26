@@ -93,21 +93,32 @@ export function Navbar() {
           <PreferencesToggle />
 
           {user && (
-            <div className="flex items-center gap-1 sm:gap-2 p-0.5 sm:pl-2 sm:pr-1 sm:py-1 rounded-xl bg-[#13151c] border border-white/[0.08]">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.displayName}
-                  className="hidden sm:block w-6 h-6 rounded-full object-cover shrink-0"
-                />
-              ) : (
-                <div className="hidden sm:flex w-6 h-6 rounded-full bg-[#d95d4e]/25 text-[#d95d4e] text-[11px] font-bold items-center justify-center uppercase shrink-0">
-                  {user.displayName.slice(0, 1)}
-                </div>
-              )}
-              <span className="hidden 2xl:inline text-xs font-medium text-[#e5e0d5] max-w-[96px] truncate">
-                {user.displayName}
-              </span>
+            <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 sm:pl-1.5 sm:pr-1 sm:py-0.5 rounded-xl bg-[#13151c] border border-white/[0.08]">
+              <NavLink
+                to="/profile"
+                title={t.navProfile}
+                aria-label={t.navProfile}
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 px-1 py-0.5 rounded-lg transition-colors min-w-0 ${
+                    isActive ? 'bg-white/10 text-[#e09f5a]' : 'hover:bg-white/10 text-[#e5e0d5]'
+                  }`
+                }
+              >
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.displayName}
+                    className="w-6 h-6 rounded-full object-cover shrink-0 border border-white/15"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-[#d95d4e]/25 text-[#d95d4e] text-[11px] font-bold flex items-center justify-center uppercase shrink-0">
+                    {user.displayName.slice(0, 1)}
+                  </div>
+                )}
+                <span className="hidden 2xl:inline text-xs font-medium max-w-[96px] truncate">
+                  {user.displayName}
+                </span>
+              </NavLink>
               <button
                 type="button"
                 onClick={() => void logout()}

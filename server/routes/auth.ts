@@ -8,10 +8,11 @@ import {
   getAdminUserId,
   hashPassword,
   isStrictAdminRow,
+  sanitizeAvatarInput,
   sha256Hex,
   verifyPassword,
 } from '../services/security.ts';
-import type { UserDTO } from '../types.ts';
+import type { UserDTO, VisibilityMode } from '../types.ts';
 
 export const SESSION_COOKIE_NAME = 'dtr_session';
 const SESSION_TTL_DAYS = 30;
@@ -37,12 +38,21 @@ function cookieOptions(maxAgeMs: number) {
   };
 }
 
+function parseVisibility(raw: unknown, fallback: VisibilityMode): VisibilityMode {
+  return raw === 'everyone' || raw === 'friends' || raw === 'selected' || raw === 'nobody'
+    ? raw
+    : fallback;
+}
+
 function mapUserRow(r: Record<string, unknown>): UserDTO {
   return {
     id: Number(r.id),
     email: String(r.email),
     displayName: String(r.display_name),
     avatarUrl: r.avatar_url ? String(r.avatar_url) : null,
+    bio: r.bio ? String(r.bio) : '',
+    ratingsVisibility: parseVisibility(r.ratings_visibility, 'everyone'),
+    notesVisibility: parseVisibility(r.notes_visibility, 'nobody'),
     createdAt: String(r.created_at),
     isAdmin: isStrictAdminRow(r),
   };
@@ -248,6 +258,8 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
     const userId = req.user!.id;
     const displayName =
       req.body?.displayName !== undefined ? String(req.body.displayName).trim() : undefined;
+    const bio = req.body?.bio !== undefined ? String(req.body.bio).trim().slice(0, 500) : undefined;
+    const hasAvatarField = req.body !== null && typeof req.body === 'object' && 'avatarUrl' in req.body;
     const email =
       req.body?.email !== undefined ? String(req.body.email).trim().toLowerCase() : undefined;
     const currentPassword = String(req.body?.currentPassword || '');
@@ -277,9 +289,34 @@ export function createAuthRouter(getDbFn: () => Promise<Db>) {
       }
     }
 
-    if (displayName !== undefined && displayName.length >= 1) {
+    if (displayName !== undefined) {
+      if (displayName.length < 1) {
+        res.status(400).json({ error: 'Нікнейм не може бути порожнім.' });
+        return;
+      }
       await db.run(`UPDATE users SET display_name = ?, updated_at = datetime('now') WHERE id = ?`, [
         displayName.slice(0, 60),
+        userId,
+      ]);
+    }
+
+    if (bio !== undefined) {
+      await db.run(`UPDATE users SET bio = ?, updated_at = datetime('now') WHERE id = ?`, [
+        bio,
+        userId,
+      ]);
+    }
+
+    if (hasAvatarField) {
+      const sanitized = sanitizeAvatarInput(req.body.avatarUrl);
+      if (sanitized === 'invalid') {
+        res.status(400).json({
+          error: 'Некоректне зображення аватара (дозволено https:// URL або PNG/JPG/WebP до 100 KB).',
+        });
+        return;
+      }
+      await db.run(`UPDATE users SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`, [
+        sanitized,
         userId,
       ]);
     }

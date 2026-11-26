@@ -1,8 +1,13 @@
+export type VisibilityMode = 'everyone' | 'friends' | 'selected' | 'nobody';
+
 export interface UserDTO {
   id: number;
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  bio: string;
+  ratingsVisibility: VisibilityMode;
+  notesVisibility: VisibilityMode;
   createdAt: string;
   isAdmin: boolean;
 }

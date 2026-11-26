@@ -8,8 +8,12 @@ import type {
   GlobalStatsResponse,
   ImportJobStatus,
   ImportPreferences,
+  PrivacySettings,
+  PublicUserCard,
+  PublicUserProfileResponse,
   Release,
   ReleaseDetail,
+  SocialOverviewResponse,
   Song,
   StatsResponse,
 } from './types';
@@ -63,6 +67,8 @@ export const api = {
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
   updateProfile: (payload: {
     displayName?: string;
+    bio?: string;
+    avatarUrl?: string | null;
     email?: string;
     currentPassword?: string;
     newPassword?: string;
@@ -170,6 +176,28 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   getAdminAnalytics: () => request<AdminAnalyticsResponse>('/api/admin/analytics'),
+
+  // Social, Friends & Privacy
+  getSocialOverview: () => request<SocialOverviewResponse>('/api/social/overview'),
+  searchUsers: (q: string) =>
+    request<{ users: PublicUserCard[] }>(`/api/social/search?q=${encodeURIComponent(q)}`),
+  followUser: (targetId: number) =>
+    request<{ ok: boolean; relationship: { iFollow: boolean; followsMe: boolean; isFriend: boolean } }>(
+      `/api/social/follow/${targetId}`,
+      { method: 'POST' }
+    ),
+  unfollowUser: (targetId: number) =>
+    request<{ ok: boolean; relationship: { iFollow: boolean; followsMe: boolean; isFriend: boolean } }>(
+      `/api/social/follow/${targetId}`,
+      { method: 'DELETE' }
+    ),
+  updatePrivacy: (payload: PrivacySettings) =>
+    request<{ ok: boolean; privacy: PrivacySettings }>('/api/social/privacy', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  getUserProfile: (targetId: number) =>
+    request<PublicUserProfileResponse>(`/api/social/users/${targetId}`),
 };
 
 export function formatDuration(ms: number | null): string {

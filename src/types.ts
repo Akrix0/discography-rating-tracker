@@ -1,8 +1,13 @@
+export type VisibilityMode = 'everyone' | 'friends' | 'selected' | 'nobody';
+
 export interface AuthUser {
   id: number;
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  bio: string;
+  ratingsVisibility: VisibilityMode;
+  notesVisibility: VisibilityMode;
   createdAt: string;
   isAdmin?: boolean;
 }
@@ -363,4 +368,96 @@ export interface AdminAnalyticsResponse {
     countries: { label: string; count: number }[];
     topPaths: { path: string; views: number }[];
   };
+}
+
+export interface PublicUserCard {
+  id: number;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string;
+  iFollow: boolean;
+  followsMe: boolean;
+  isFriend: boolean;
+  createdAt: string;
+}
+
+export interface PrivacySettings {
+  ratingsVisibility: VisibilityMode;
+  notesVisibility: VisibilityMode;
+  selectedRatingsFriendIds: number[];
+  selectedNotesFriendIds: number[];
+}
+
+export interface SocialOverviewResponse {
+  friends: PublicUserCard[];
+  followers: PublicUserCard[];
+  following: PublicUserCard[];
+  privacy: PrivacySettings;
+}
+
+export interface PublicRatedSong {
+  id: number;
+  title: string;
+  version_tag: string | null;
+  category: string;
+  cover_url: string | null;
+  spotify_url: string | null;
+  artist_id: number;
+  artist_name: string;
+  release_title: string | null;
+  release_slug: string | null;
+  rating: number | null;
+  note: string | null;
+  updatedAt: string;
+}
+
+export interface PublicRatedRelease {
+  id: number;
+  slug: string;
+  title: string;
+  category: string;
+  release_type: string;
+  release_year: number | null;
+  cover_url: string | null;
+  spotify_url: string | null;
+  artist_id: number;
+  artist_name: string;
+  rating: number | null;
+  note: string | null;
+  updatedAt: string;
+}
+
+export interface PublicUserProfileResponse {
+  profile: {
+    id: number;
+    displayName: string;
+    avatarUrl: string | null;
+    bio: string;
+    ratingsVisibility: VisibilityMode;
+    notesVisibility: VisibilityMode;
+    createdAt: string;
+  };
+  counts: {
+    friends: number;
+    followers: number;
+    following: number;
+  };
+  relationship: {
+    iFollow: boolean;
+    followsMe: boolean;
+    isFriend: boolean;
+  };
+  canViewRatings: boolean;
+  canViewNotes: boolean;
+  artists: {
+    id: number;
+    name: string;
+    slug: string;
+    image_url: string | null;
+    totalSongs: number;
+    ratedSongs: number;
+    averageSongRating: number | null;
+  }[];
+  ratedSongs: PublicRatedSong[];
+  ratedReleases: PublicRatedRelease[];
 }

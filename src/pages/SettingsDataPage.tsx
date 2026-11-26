@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Download,
   Upload,
@@ -245,6 +246,12 @@ export function SettingsDataPage() {
             <UserCheck className="w-5 h-5 text-[#e09f5a] shrink-0" />
             <h2 className="font-display text-base sm:text-lg font-bold text-[#f3efe6]">{t.accountSectionTitle}</h2>
           </div>
+          <Link
+            to="/profile"
+            className="text-xs font-semibold text-[#e09f5a] hover:underline"
+          >
+            {t.manageProfileFromSettings}
+          </Link>
         </div>
 
         <form onSubmit={handleSaveProfile} className="grid grid-cols-1 sm:grid-cols-2 gap-3">

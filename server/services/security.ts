@@ -105,6 +105,27 @@ export function sanitizeHttpUrl(raw: string | null | undefined): string | null {
   }
 }
 
+export function sanitizeAvatarInput(raw: unknown): string | null | 'invalid' {
+  if (raw === null || raw === undefined) return null;
+  const trimmed = String(raw).trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('data:')) {
+    // Allow only compact base64 raster images (strictly blocks SVG/HTML XSS)
+    if (
+      trimmed.length <= 140_000 &&
+      /^data:image\/(webp|jpeg|jpg|png|gif);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)
+    ) {
+      return trimmed;
+    }
+    return 'invalid';
+  }
+
+  if (trimmed.length > 1000) return 'invalid';
+  const httpUrl = sanitizeHttpUrl(trimmed);
+  return httpUrl || 'invalid';
+}
+
 export function generateSecureToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString('hex');
 }

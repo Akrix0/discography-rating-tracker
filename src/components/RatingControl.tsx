@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Check, Loader2, AlertCircle, X, MessageSquare } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Check, Loader2, AlertCircle, X, MessageSquare, Save } from 'lucide-react';
 import { useAutoSave, type SaveStatus } from '../hooks/useAutoSave';
 import { usePreferences } from '../context/PreferencesContext';
 
@@ -42,7 +42,26 @@ export function RatingControl({
   const [inputValue, setInputValue] = useState<string>(
     initialRating !== null ? String(initialRating) : ''
   );
+
+  // Smart note state (never overwritten mid-typing)
   const [note, setNote] = useState<string>(initialNote);
+  const [noteStatus, setNoteStatus] = useState<SaveStatus>('idle');
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [isNoteFocused, setIsNoteFocused] = useState(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastSavedNoteRef = useRef<string>(initialNote);
+  const latestNoteRef = useRef<string>(initialNote);
+  const isFocusedRef = useRef<boolean>(false);
+  const hasTypedSinceFocusRef = useRef<boolean>(false);
+  const lastKeystrokeAtRef = useRef<number>(0);
+  const mouseAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const savingNoteInFlightRef = useRef<boolean>(false);
+  const noteFadeTimerRef = useRef<number | null>(null);
+  const onSaveNoteRef = useRef(onSaveNote);
+  onSaveNoteRef.current = onSaveNote;
+  const onUpdatedRef = useRef(onUpdated);
+  onUpdatedRef.current = onUpdated;
 
   useEffect(() => {
     setRating(initialRating);
@@ -50,20 +69,116 @@ export function RatingControl({
   }, [initialRating]);
 
   useEffect(() => {
-    setNote(initialNote);
+    if (!isFocusedRef.current && latestNoteRef.current === lastSavedNoteRef.current) {
+      setNote(initialNote);
+      lastSavedNoteRef.current = initialNote;
+      latestNoteRef.current = initialNote;
+    }
   }, [initialNote]);
+
+  useEffect(() => {
+    return () => {
+      if (noteFadeTimerRef.current !== null) {
+        window.clearTimeout(noteFadeTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Auto-resize textarea cleanly to full content height and keep it permanently
+  const syncTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const minH = compact ? 48 : 74;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(minH, el.scrollHeight + 2)}px`;
+  }, [compact]);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [note, syncTextareaHeight]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      syncTextareaHeight();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [syncTextareaHeight]);
 
   const ratingSaver = useAutoSave<number | null>(async (val) => {
     await onSaveRating(val);
-    onUpdated?.({ rating: val });
+    onUpdatedRef.current?.({ rating: val });
   }, 320);
 
-  const noteSaver = useAutoSave<string>(async (val) => {
-    await onSaveNote(val);
-    onUpdated?.({ note: val });
-  }, 450);
+  const commitNoteSave = useCallback(async () => {
+    const valToSave = latestNoteRef.current;
+    if (savingNoteInFlightRef.current) return;
+    if (valToSave === lastSavedNoteRef.current) {
+      hasTypedSinceFocusRef.current = false;
+      return;
+    }
 
-  const combinedStatus = combineStatus(ratingSaver.status, noteSaver.status);
+    savingNoteInFlightRef.current = true;
+    hasTypedSinceFocusRef.current = false;
+    mouseAnchorRef.current = null;
+    setNoteStatus('saving');
+    setNoteError(null);
+
+    try {
+      await onSaveNoteRef.current(valToSave);
+      lastSavedNoteRef.current = valToSave;
+      onUpdatedRef.current?.({ note: valToSave });
+      setNoteStatus('saved');
+      if (noteFadeTimerRef.current !== null) window.clearTimeout(noteFadeTimerRef.current);
+      noteFadeTimerRef.current = window.setTimeout(() => {
+        setNoteStatus((prev) => (prev === 'saved' ? 'idle' : prev));
+      }, 2400);
+    } catch (err) {
+      setNoteStatus('error');
+      setNoteError(err instanceof Error ? err.message : t.errorText);
+    } finally {
+      savingNoteInFlightRef.current = false;
+    }
+  }, [t.errorText]);
+
+  // Save on pointer movement after user stops typing on laptop/desktop
+  useEffect(() => {
+    if (!isNoteFocused) {
+      mouseAnchorRef.current = null;
+      return;
+    }
+
+    const onWindowMouseMove = (e: MouseEvent) => {
+      if (!hasTypedSinceFocusRef.current) return;
+      if (latestNoteRef.current === lastSavedNoteRef.current) return;
+      if (Date.now() - lastKeystrokeAtRef.current < 350) {
+        mouseAnchorRef.current = null;
+        return;
+      }
+      if (!mouseAnchorRef.current) {
+        mouseAnchorRef.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
+      const dist = Math.hypot(
+        e.clientX - mouseAnchorRef.current.x,
+        e.clientY - mouseAnchorRef.current.y
+      );
+      if (dist >= 8) {
+        mouseAnchorRef.current = null;
+        void commitNoteSave();
+      }
+    };
+
+    window.addEventListener('mousemove', onWindowMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', onWindowMouseMove);
+    };
+  }, [isNoteFocused, commitNoteSave]);
+
+  const combinedStatus = combineStatus(ratingSaver.status, noteStatus);
+  const isNoteDirty = note !== lastSavedNoteRef.current;
 
   const handleSliderChange = (rawVal: string) => {
     const num = Math.max(0, Math.min(100, Math.round(Number(rawVal))));
@@ -98,7 +213,13 @@ export function RatingControl({
 
   const handleNoteChange = (val: string) => {
     setNote(val);
-    noteSaver.scheduleSave(val);
+    latestNoteRef.current = val;
+    hasTypedSinceFocusRef.current = true;
+    lastKeystrokeAtRef.current = Date.now();
+    mouseAnchorRef.current = null;
+    if (noteStatus === 'saved' || noteStatus === 'error') {
+      setNoteStatus('idle');
+    }
   };
 
   const fillPercent = rating !== null ? rating : 0;
@@ -127,18 +248,22 @@ export function RatingControl({
               type="button"
               onClick={() => {
                 if (ratingSaver.status === 'error') ratingSaver.retry();
-                if (noteSaver.status === 'error') noteSaver.retry();
+                if (noteStatus === 'error') void commitNoteSave();
               }}
               className="inline-flex items-center gap-1 text-[#d95d4e] hover:underline"
-              title={ratingSaver.errorMessage || noteSaver.errorMessage || t.errorText}
+              title={ratingSaver.errorMessage || noteError || t.errorText}
             >
               <AlertCircle className="w-3 h-3" />
               <span>{t.errorText}</span>
             </button>
           )}
           {combinedStatus === 'idle' && (
-            <span className="text-[#6b7280]">
-              {rating === null ? t.unratedText : t.autoSaveText}
+            <span className={isNoteDirty ? 'text-[#e09f5a]' : 'text-[#6b7280]'}>
+              {isNoteDirty
+                ? t.unsavedNoteText
+                : rating === null
+                ? t.unratedText
+                : t.autoSaveText}
             </span>
           )}
         </div>
@@ -201,16 +326,58 @@ export function RatingControl({
         </div>
       </div>
 
-      <div className="relative flex items-start gap-2 min-w-0">
-        <MessageSquare className="w-3.5 h-3.5 text-[#6b7280] mt-2 shrink-0" />
-        <textarea
-          rows={compact ? 1 : 2}
-          value={note}
-          placeholder={notePlaceholder || t.songNotePlaceholder}
-          onChange={(e) => handleNoteChange(e.target.value)}
-          onBlur={() => noteSaver.flushSave()}
-          className="w-full min-w-0 resize-y min-h-[34px] rounded-lg bg-[#0b0c10]/70 border border-white/[0.08] px-3 py-1.5 text-xs sm:text-sm text-[#e5e0d5] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]/50 transition-colors"
-        />
+      <div className="space-y-1.5 min-w-0">
+        <div className="relative flex items-start gap-2 min-w-0">
+          <MessageSquare className="w-3.5 h-3.5 text-[#6b7280] mt-2.5 shrink-0" />
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={note}
+            placeholder={notePlaceholder || t.songNotePlaceholder}
+            onFocus={() => {
+              isFocusedRef.current = true;
+              setIsNoteFocused(true);
+              mouseAnchorRef.current = null;
+            }}
+            onChange={(e) => handleNoteChange(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                void commitNoteSave();
+              }
+            }}
+            onBlur={() => {
+              isFocusedRef.current = false;
+              setIsNoteFocused(false);
+              mouseAnchorRef.current = null;
+              void commitNoteSave();
+            }}
+            className="w-full min-w-0 resize-y overflow-hidden rounded-lg bg-[#0b0c10]/70 border border-white/[0.08] px-3 py-2 text-xs sm:text-sm leading-relaxed text-[#e5e0d5] placeholder:text-[#6b7280] focus:outline-none focus:border-[#e09f5a]/50 transition-colors"
+          />
+        </div>
+
+        {(isNoteDirty || isNoteFocused || noteStatus === 'saving' || noteStatus === 'error') && (
+          <div className="flex items-center justify-end pl-5">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void commitNoteSave()}
+              disabled={!isNoteDirty || noteStatus === 'saving'}
+              className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1.5 border transition-colors ${
+                isNoteDirty
+                  ? 'bg-[#e09f5a]/20 hover:bg-[#e09f5a]/30 text-[#e09f5a] border-[#e09f5a]/45'
+                  : 'bg-white/[0.03] text-[#6b7280] border-white/[0.08] opacity-60 cursor-default'
+              }`}
+            >
+              {noteStatus === 'saving' ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Save className="w-3 h-3" />
+              )}
+              <span>{t.saveNoteBtn}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

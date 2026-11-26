@@ -14,6 +14,8 @@ import { ReleaseDetailPage } from './pages/ReleaseDetailPage';
 import { SettingsDataPage } from './pages/SettingsDataPage';
 import { AuthPage } from './pages/AuthPage';
 import { AdminAnalyticsPage } from './pages/AdminAnalyticsPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { UserProfilePage } from './pages/UserProfilePage';
 
 function AppRoutes() {
   const { user, loadingAuth } = useAuth();
@@ -55,6 +57,8 @@ function AppRoutes() {
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/releases/:idOrSlug" element={<ReleaseDetailPage />} />
             <Route path="/settings" element={<SettingsDataPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/users/:id" element={<UserProfilePage />} />
             <Route
               path="/admin"
               element={user.isAdmin ? <AdminAnalyticsPage /> : <Navigate to="/" replace />}

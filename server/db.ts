@@ -308,6 +308,25 @@ async function createSchema(db: Db): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_visit_logs_created ON visit_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_visit_logs_visitor ON visit_logs(visitor_id);
+
+    CREATE TABLE IF NOT EXISTS user_follows (
+      follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (follower_id, following_id),
+      CHECK (follower_id != following_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_follows_follower ON user_follows(follower_id);
+    CREATE INDEX IF NOT EXISTS idx_follows_following ON user_follows(following_id);
+
+    CREATE TABLE IF NOT EXISTS user_privacy_allowlist (
+      owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      scope TEXT NOT NULL CHECK (scope IN ('ratings', 'notes')),
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (owner_id, viewer_id, scope)
+    );
+    CREATE INDEX IF NOT EXISTS idx_allowlist_owner_scope ON user_privacy_allowlist(owner_id, scope);
   `);
 
   const userCols = await db.all<{ name: string }>('PRAGMA table_info(users)');
@@ -320,6 +339,15 @@ async function createSchema(db: Db): Promise<void> {
   }
   if (!colNames.has('last_path')) {
     await db.exec('ALTER TABLE users ADD COLUMN last_path TEXT;');
+  }
+  if (!colNames.has('bio')) {
+    await db.exec("ALTER TABLE users ADD COLUMN bio TEXT NOT NULL DEFAULT '';");
+  }
+  if (!colNames.has('ratings_visibility')) {
+    await db.exec("ALTER TABLE users ADD COLUMN ratings_visibility TEXT NOT NULL DEFAULT 'everyone';");
+  }
+  if (!colNames.has('notes_visibility')) {
+    await db.exec("ALTER TABLE users ADD COLUMN notes_visibility TEXT NOT NULL DEFAULT 'nobody';");
   }
 
   // Strictly enforce admin flag for the single configured owner account only
