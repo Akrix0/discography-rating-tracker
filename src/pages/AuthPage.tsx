@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Disc3, Loader2, Lock, Mail, User } from 'lucide-react';
+import { AlertCircle, Loader2, Lock, Mail, User } from 'lucide-react';
 import { PreferencesToggle } from '../components/PreferencesToggle';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
@@ -41,9 +41,11 @@ export function AuthPage() {
       <div className="flex-1 flex items-center justify-center py-6">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-3">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#d95d4e] to-[#e09f5a] flex items-center justify-center shadow-2xl shadow-[#d95d4e]/30">
-              <Disc3 className="w-8 h-8 text-[#0b0c10]" />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt={t.appTitle}
+              className="w-16 h-16 mx-auto rounded-2xl shadow-2xl shadow-black/40 border border-white/10"
+            />
             <div>
               <h1 className="font-display text-xl sm:text-3xl font-bold text-[#f3efe6] break-words">
                 {t.appTitle}

@@ -228,3 +228,82 @@ input[type='number'].no-spinner::-webkit-inner-spin-button {
 input[type='number'].no-spinner {
   -moz-appearance: textfield;
 }
+
+@keyframes emblem-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+}
+
+@keyframes emblem-glow {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes disc-bob-1 {
+  0%, 100% {
+    transform: translate(0px, 0px);
+  }
+  50% {
+    transform: translate(-1.5px, -2px);
+  }
+}
+
+@keyframes disc-bob-2 {
+  0%, 100% {
+    transform: translate(0px, 0px);
+  }
+  50% {
+    transform: translate(1.8px, -1px);
+  }
+}
+
+@keyframes disc-bob-3 {
+  0%, 100% {
+    transform: translate(0px, 0px);
+  }
+  50% {
+    transform: translate(-1.2px, 1.5px);
+  }
+}
+
+.animate-emblem-float {
+  animation: emblem-float 4.8s ease-in-out infinite;
+}
+
+.animate-emblem-glow {
+  animation: emblem-glow 4.8s ease-in-out infinite;
+}
+
+.animate-disc-1 {
+  animation: disc-bob-1 3.6s ease-in-out infinite;
+}
+
+.animate-disc-2 {
+  animation: disc-bob-2 4.1s ease-in-out infinite;
+  animation-delay: -1.1s;
+}
+
+.animate-disc-3 {
+  animation: disc-bob-3 4.5s ease-in-out infinite;
+  animation-delay: -2.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-emblem-float,
+  .animate-emblem-glow,
+  .animate-disc-1,
+  .animate-disc-2,
+  .animate-disc-3 {
+    animation: none;
+  }
+}

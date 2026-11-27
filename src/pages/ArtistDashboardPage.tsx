@@ -278,7 +278,68 @@ export function ArtistDashboardPage() {
             </div>
           </div>
 
-          <div className="shrink-0 w-full lg:w-64 rounded-2xl bg-[#0b0c10]/70 border border-white/[0.08] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center gap-6 shrink-0">
+            {!selectedArtist?.image_url && (
+              <div
+                aria-hidden="true"
+                className="hidden md:flex items-center justify-center shrink-0 select-none"
+              >
+                <div className="relative group animate-emblem-float transition-transform duration-300 hover:scale-105">
+                  <div className="animate-emblem-glow absolute -inset-3 rounded-3xl bg-gradient-to-br from-[#d95d4e]/30 via-[#e09f5a]/25 to-[#5fb38e]/25 blur-xl" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 64 64"
+                    fill="none"
+                    className="relative w-24 h-24 rounded-2xl border border-white/15 shadow-2xl"
+                  >
+                    <rect x="4" y="4" width="56" height="56" rx="14" fill="#0b0c10" />
+                    <g className="animate-disc-3">
+                      <ellipse cx="30" cy="46.5" rx="19" ry="6.8" fill="#326e53" />
+                      <ellipse cx="30" cy="44" rx="19" ry="6.8" fill="#5fb38e" />
+                      <path
+                        d="M14.5 45.2C17.5 47.6 22.5 48.8 27.5 49"
+                        stroke="#f3efe6"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                        opacity="0.45"
+                      />
+                      <ellipse cx="30" cy="44" rx="6" ry="2" fill="#0b0c10" />
+                      <ellipse cx="30" cy="44" rx="2.2" ry="0.8" fill="#f3efe6" />
+                    </g>
+                    <g className="animate-disc-2">
+                      <ellipse cx="34.5" cy="36.5" rx="19" ry="6.8" fill="#0b0c10" opacity="0.5" />
+                      <ellipse cx="34.5" cy="35" rx="19" ry="6.8" fill="#9c6429" />
+                      <ellipse cx="34.5" cy="32.5" rx="19" ry="6.8" fill="#e09f5a" />
+                      <path
+                        d="M49.5 31C46.8 28.8 42.2 27.8 37 27.7"
+                        stroke="#f3efe6"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                        opacity="0.45"
+                      />
+                      <ellipse cx="34.5" cy="32.5" rx="6" ry="2" fill="#0b0c10" />
+                      <ellipse cx="34.5" cy="32.5" rx="2.2" ry="0.8" fill="#f3efe6" />
+                    </g>
+                    <g className="animate-disc-1">
+                      <ellipse cx="29.5" cy="25.5" rx="19" ry="6.8" fill="#0b0c10" opacity="0.5" />
+                      <ellipse cx="29.5" cy="24" rx="19" ry="6.8" fill="#8f3025" />
+                      <ellipse cx="29.5" cy="21.5" rx="19" ry="6.8" fill="#d95d4e" />
+                      <path
+                        d="M14.5 20C18.5 17.5 24 16.6 30 16.7"
+                        stroke="#f3efe6"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        opacity="0.45"
+                      />
+                      <ellipse cx="29.5" cy="21.5" rx="6" ry="2" fill="#0b0c10" />
+                      <ellipse cx="29.5" cy="21.5" rx="2.2" ry="0.8" fill="#f3efe6" />
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            )}
+
+            <div className="shrink-0 w-full lg:w-64 rounded-2xl bg-[#0b0c10]/70 border border-white/[0.08] p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between text-xs text-[#9ca3af]">
               <span>{t.overallProgress}</span>
               <span className="font-mono-num text-[#e09f5a] font-bold">
@@ -297,6 +358,7 @@ export function ArtistDashboardPage() {
               </span>
               <span>{t.totalOf(stats.totalSongs)}</span>
             </div>
+          </div>
           </div>
         </div>
       </section>

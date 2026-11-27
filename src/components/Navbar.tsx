@@ -33,9 +33,11 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 lg:gap-3">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 lg:flex-initial lg:shrink">
           <NavLink to="/artists" className="hidden sm:flex items-center gap-2.5 group shrink-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d95d4e] to-[#e09f5a] flex items-center justify-center shadow-lg shadow-[#d95d4e]/20 group-hover:scale-105 transition-transform">
-              <Disc3 className="w-5 h-5 text-[#0b0c10]" />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt={t.appTitle}
+              className="w-9 h-9 rounded-lg shadow-lg shadow-black/30 border border-white/10 group-hover:scale-105 transition-transform"
+            />
           </NavLink>
 
           <ArtistDropdown />
