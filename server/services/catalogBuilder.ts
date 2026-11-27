@@ -127,17 +127,24 @@ function classifyRelease(
   const isDeluxe = /\b(deluxe|extended|expanded|anniversary|complete edition|special edition|reissue)\b/i.test(
     title
   );
-  if (rawType === 'album' || trackCount >= 7) {
+  const hasEpWord = /\bep\b|\bmini[- ]?album\b/i.test(t);
+  if (/\bspotify singles\b/i.test(t)) {
+    return { category: 'Singles', releaseType: 'single' };
+  }
+  if (rawType === 'album' || (trackCount >= 7 && !hasEpWord)) {
     return {
       category: 'Studio Albums',
       releaseType: isDeluxe ? 'deluxe_album' : 'album',
     };
   }
-  if (rawType === 'ep' || (trackCount >= 3 && trackCount <= 6)) {
+  if (rawType === 'ep' || (hasEpWord && trackCount >= 3)) {
     return { category: 'EPs', releaseType: 'ep' };
   }
   if (rawType === 'single' || trackCount <= 2) {
     return { category: 'Singles', releaseType: 'single' };
+  }
+  if (trackCount >= 4 && trackCount <= 6) {
+    return { category: 'EPs', releaseType: 'ep' };
   }
   return { category: 'Other', releaseType: 'other' };
 }
@@ -883,6 +890,18 @@ async function persistArtistCatalog(
         foundTitle.spotify_id = rel.spotify_id;
         relBySp.set(rel.spotify_id, releaseId);
       }
+    }
+
+    if (releaseId) {
+      await db.run(
+        `UPDATE releases SET category = ?, release_type = ?, is_alt_or_secondary = ? WHERE id = ?`,
+        [rel.category, rel.release_type, isReleaseSecondary(rel.category, rel.release_type), releaseId]
+      );
+      await db.run(
+        `UPDATE songs SET category = ?, is_alt_or_secondary = ?
+         WHERE primary_release_id = ? AND version_tag IS NULL`,
+        [rel.category, isSongSecondary(rel.category, null), releaseId]
+      );
     }
 
     if (!releaseId) {

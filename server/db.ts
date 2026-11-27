@@ -420,6 +420,18 @@ async function createSchema(db: Db): Promise<void> {
     `UPDATE users SET is_admin = CASE WHEN id = ? AND lower(email) = ? THEN 1 ELSE 0 END`,
     [getAdminUserId(), getAdminEmail()]
   );
+
+  // Reclassify Spotify Singles from EPs to Singles if previously misclassified by track count
+  await db.run(
+    `UPDATE releases SET category = 'Singles', release_type = 'single'
+     WHERE category = 'EPs' AND lower(title) LIKE '%spotify singles%'`
+  );
+  await db.run(
+    `UPDATE songs SET category = 'Singles'
+     WHERE category = 'EPs'
+       AND version_tag IS NULL
+       AND primary_release_id IN (SELECT id FROM releases WHERE lower(title) LIKE '%spotify singles%')`
+  );
 }
 
 async function seedMotherMotherIfEmpty(db: Db): Promise<void> {
