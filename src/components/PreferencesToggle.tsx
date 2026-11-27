@@ -1,5 +1,7 @@
 import { Moon, Sun } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
+import { Tooltip } from './Tooltip';
+import { btnIcon } from './ui/buttonStyles';
 
 export function PreferencesToggle() {
   const { lang, theme, setLang, toggleTheme, t } = usePreferences();
@@ -7,14 +9,16 @@ export function PreferencesToggle() {
   return (
     <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
       {/* Compact single cycle button on < sm */}
-      <button
-        type="button"
-        onClick={() => setLang(lang === 'uk' ? 'en' : 'uk')}
-        aria-label={lang === 'uk' ? 'Switch language to EN' : 'Змінити мову на UA'}
-        className="sm:hidden h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[11px] font-bold uppercase text-[#f3efe6] hover:bg-white/10 transition-colors shrink-0"
-      >
-        {lang === 'uk' ? 'UA' : 'EN'}
-      </button>
+      <Tooltip content={lang === 'uk' ? 'Switch language to EN' : 'Змінити мову на UA'} position="bottom">
+        <button
+          type="button"
+          onClick={() => setLang(lang === 'uk' ? 'en' : 'uk')}
+          aria-label={lang === 'uk' ? 'Switch language to EN' : 'Змінити мову на UA'}
+          className="sm:hidden h-8 px-2 rounded-lg bg-[#13151c] border border-white/10 text-[11px] font-bold uppercase text-[#f3efe6] hover:bg-white/10 transition-all active:scale-[0.98] shrink-0 cursor-pointer"
+        >
+          {lang === 'uk' ? 'UA' : 'EN'}
+        </button>
+      </Tooltip>
 
       {/* Segmented switcher on sm+ */}
       <div
@@ -27,9 +31,9 @@ export function PreferencesToggle() {
             key={code}
             type="button"
             onClick={() => setLang(code)}
-            className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase transition-colors ${
+            className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase transition-all cursor-pointer ${
               lang === code
-                ? 'bg-[#d95d4e] text-white'
+                ? 'bg-[#d95d4e] text-white shadow-sm'
                 : 'text-[#9ca3af] hover:text-[#f3efe6]'
             }`}
           >
@@ -38,15 +42,20 @@ export function PreferencesToggle() {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-label={theme === 'dark' ? t.switchToLight : t.switchToDark}
-        title={theme === 'dark' ? t.switchToLight : t.switchToDark}
-        className="w-8 h-8 rounded-lg bg-[#13151c] hover:bg-white/10 border border-white/10 flex items-center justify-center text-[#e09f5a] transition-colors shrink-0"
+      <Tooltip
+        content={theme === 'dark' ? t.switchToLight : t.switchToDark}
+        position="bottom"
+        align="end"
       >
-        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-      </button>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? t.switchToLight : t.switchToDark}
+          className={`${btnIcon} text-[#e09f5a] hover:text-[#e09f5a]`}
+        >
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+      </Tooltip>
     </div>
   );
 }

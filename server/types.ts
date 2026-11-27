@@ -184,6 +184,7 @@ export interface ReleaseDTO {
   average_track_rating: number | null;
   best_song_id: number | null;
   best_song_title: string | null;
+  is_hidden?: boolean;
 }
 
 export interface ReleaseTrackDTO extends SongDTO {

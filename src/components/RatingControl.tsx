@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Check, Loader2, AlertCircle, X, MessageSquare, Save } from 'lucide-react';
 import { useAutoSave, type SaveStatus } from '../hooks/useAutoSave';
 import { usePreferences } from '../context/PreferencesContext';
+import { Tooltip } from './Tooltip';
 
 interface RatingControlProps {
   rating: number | null;
@@ -314,14 +315,16 @@ export function RatingControl({
           </div>
 
           {rating !== null && (
-            <button
-              type="button"
-              onClick={handleClearRating}
-              title={t.clearRatingTitle}
-              className="w-7 h-7 rounded-md flex items-center justify-center text-[#6b7280] hover:text-[#f3efe6] hover:bg-white/10 transition-colors shrink-0"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+            <Tooltip content={t.clearRatingTitle} align="end">
+              <button
+                type="button"
+                onClick={handleClearRating}
+                aria-label={t.clearRatingTitle}
+                className="w-7 h-7 rounded-md flex items-center justify-center text-[#6b7280] hover:text-[#f3efe6] hover:bg-white/10 transition-all active:scale-[0.96] shrink-0 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>

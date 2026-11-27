@@ -264,6 +264,14 @@ async function createSchema(db: Db): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_release_best_tracks_user_song ON release_best_tracks(user_id, song_id);
 
+    CREATE TABLE IF NOT EXISTS user_hidden_releases (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      release_id INTEGER NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, release_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hidden_releases_user ON user_hidden_releases(user_id);
+
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

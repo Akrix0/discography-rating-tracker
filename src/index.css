@@ -131,6 +131,12 @@ html.light .text-\[\#f3c969\] {
   color: #9a5b13 !important;
 }
 
+html.light [role='tooltip'] {
+  background-color: #18181b !important;
+  color: #f8f6f2 !important;
+  border-color: rgba(24, 24, 27, 0.25) !important;
+}
+
 html.light .border-white\/10,
 html.light .border-white\/12,
 html.light .border-white\/15,

@@ -252,6 +252,7 @@ function mapReleaseRows(rows: Record<string, unknown>[]): ReleaseDTO[] {
     best_song_id:
       r.best_song_id !== null && r.best_song_id !== undefined ? Number(r.best_song_id) : null,
     best_song_title: r.best_song_title ? String(r.best_song_title) : null,
+    is_hidden: Boolean(Number(r.is_hidden || 0)),
   }));
 }
 
@@ -259,11 +260,16 @@ async function queryArtistsSummary(db: Db, userId: number): Promise<ArtistSummar
   const rows = await db.all<Record<string, unknown>>(
     `SELECT
       a.*,
-      (SELECT COUNT(*) FROM releases r WHERE r.artist_id = a.id) AS totalReleases,
+      (
+        SELECT COUNT(*) FROM releases r
+        WHERE r.artist_id = a.id
+          AND NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)
+      ) AS totalReleases,
       (
         SELECT COUNT(*) FROM releases r
         JOIN release_ratings rr ON rr.release_id = r.id AND rr.user_id = ? AND rr.rating IS NOT NULL
         WHERE r.artist_id = a.id
+          AND NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)
       ) AS ratedReleases,
       (SELECT COUNT(*) FROM songs s WHERE s.artist_id = a.id) AS totalSongs,
       (
@@ -280,11 +286,12 @@ async function queryArtistsSummary(db: Db, userId: number): Promise<ArtistSummar
         SELECT ROUND(AVG(rr.rating), 1) FROM releases r
         JOIN release_ratings rr ON rr.release_id = r.id AND rr.user_id = ? AND rr.rating IS NOT NULL
         WHERE r.artist_id = a.id
+          AND NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)
       ) AS averageReleaseRating
     FROM artists a
     JOIN user_artists ua ON ua.artist_id = a.id AND ua.user_id = ?
     ORDER BY ua.added_at ASC, a.id ASC`,
-    [userId, userId, userId, userId, userId]
+    [userId, userId, userId, userId, userId, userId, userId, userId]
   );
 
   return rows.map((r) => {
@@ -444,6 +451,10 @@ app.delete('/api/artists/:id', requireAuth, async (req, res) => {
     `DELETE FROM release_best_tracks WHERE user_id = ? AND release_id IN (SELECT id FROM releases WHERE artist_id = ?)`,
     [userId, artistId]
   );
+  await db.run(
+    `DELETE FROM user_hidden_releases WHERE user_id = ? AND release_id IN (SELECT id FROM releases WHERE artist_id = ?)`,
+    [userId, artistId]
+  );
   res.json({ ok: true, deletedArtistId: artistId });
 });
 
@@ -472,8 +483,9 @@ app.get('/api/global/stats', requireAuth, async (req, res) => {
         JOIN releases r ON r.id = rr.release_id
         JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?
         WHERE rr.user_id = ? AND rr.rating IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)
       ) AS overallAvgRelease`,
-    [userId, userId, userId, userId]
+    [userId, userId, userId, userId, userId]
   );
 
   const globalTopSongsRaw = await db.all<Record<string, unknown>>(
@@ -531,9 +543,10 @@ app.get('/api/global/stats', requireAuth, async (req, res) => {
     LEFT JOIN notes n ON n.user_id = ? AND n.target_type = 'release' AND n.target_id = r.id
     LEFT JOIN release_best_tracks rbt ON rbt.release_id = r.id AND rbt.user_id = ?
     LEFT JOIN songs bs ON bs.id = rbt.song_id
+    WHERE NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)
     ORDER BY rr.rating DESC, rr.updated_at DESC
     LIMIT 12`,
-    [userId, userId, userId, userId, userId, userId]
+    [userId, userId, userId, userId, userId, userId, userId]
   );
 
   const artistLeaderboard = [...artists].sort((a, b) => {
@@ -564,8 +577,11 @@ app.get('/api/filters/meta', requireAuth, async (req, res) => {
   const artistId = parseArtistIdParam(req.query.artistId);
   const hideSecondary = req.query.hideSecondary === '1';
 
-  const relWhere: string[] = ['EXISTS (SELECT 1 FROM user_artists ua WHERE ua.artist_id = r.artist_id AND ua.user_id = ?)'];
-  const relParams: (string | number)[] = [userId];
+  const relWhere: string[] = [
+    'EXISTS (SELECT 1 FROM user_artists ua WHERE ua.artist_id = r.artist_id AND ua.user_id = ?)',
+    'NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)',
+  ];
+  const relParams: (string | number)[] = [userId, userId];
   if (artistId) {
     relWhere.push('r.artist_id = ?');
     relParams.push(artistId);
@@ -671,8 +687,11 @@ app.get('/api/stats', requireAuth, async (req, res) => {
       ROUND(AVG(rr.rating), 1) AS averageReleaseRating
     FROM releases r
     LEFT JOIN release_ratings rr ON rr.release_id = r.id AND rr.user_id = ? AND rr.rating IS NOT NULL
-    ${scopeRel}`,
-    [userId, ...scopeParams]
+    ${scopeRel}
+    ${artistId ? 'AND' : 'WHERE'} NOT EXISTS (
+      SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id
+    )`,
+    artistId ? [userId, ...scopeParams, userId] : [userId, ...scopeParams, userId]
   )) || { totalReleases: 0, ratedReleases: 0, averageReleaseRating: null };
 
   const totalSongsNum = Number(songStats.totalSongs || 0);
@@ -769,15 +788,16 @@ app.get('/api/stats', requireAuth, async (req, res) => {
     LEFT JOIN notes n ON n.user_id = ? AND n.target_type = 'release' AND n.target_id = r.id
     LEFT JOIN release_best_tracks rbt ON rbt.release_id = r.id AND rbt.user_id = ?
     LEFT JOIN songs bs ON bs.id = rbt.song_id
-    ${artistId ? 'WHERE r.artist_id = ?' : ''}
+    WHERE NOT EXISTS (SELECT 1 FROM user_hidden_releases uhr WHERE uhr.user_id = ? AND uhr.release_id = r.id)
+    ${artistId ? 'AND r.artist_id = ?' : ''}
     ORDER BY
       CASE WHEN r.category = 'Studio Albums' THEN 0 ELSE 1 END ASC,
       rr.rating DESC,
       rr.updated_at DESC
     LIMIT 8`,
     artistId
-      ? [userId, userId, userId, userId, userId, userId, artistId]
-      : [userId, userId, userId, userId, userId, userId]
+      ? [userId, userId, userId, userId, userId, userId, userId, artistId]
+      : [userId, userId, userId, userId, userId, userId, userId]
   );
 
   const nextUnratedRaw = await db.all<Record<string, unknown>>(
@@ -1134,9 +1154,21 @@ app.get('/api/releases', requireAuth, async (req, res) => {
   const year = req.query.year !== undefined && req.query.year !== '' ? Number(req.query.year) : null;
   const sortBy = String(req.query.sortBy || 'release_date');
   const sortDir = String(req.query.sortDir || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+  const hiddenFilter =
+    req.query.hiddenFilter === 'hidden'
+      ? 'hidden'
+      : req.query.hiddenFilter === 'all'
+      ? 'all'
+      : 'visible';
 
   const where: string[] = ['1=1'];
-  const params: (string | number)[] = [userId, userId, userId, userId, userId, userId];
+  const params: (string | number)[] = [userId, userId, userId, userId, userId, userId, userId];
+
+  if (hiddenFilter === 'visible') {
+    where.push('uhr.release_id IS NULL');
+  } else if (hiddenFilter === 'hidden') {
+    where.push('uhr.release_id IS NOT NULL');
+  }
 
   if (artistId) {
     where.push('r.artist_id = ?');
@@ -1195,6 +1227,8 @@ app.get('/api/releases', requireAuth, async (req, res) => {
       break;
   }
 
+  const finalOrderClause = hiddenFilter === 'all' ? `is_hidden ASC, ${orderClause}` : orderClause;
+
   const sql = `
     SELECT
       r.*,
@@ -1206,6 +1240,7 @@ app.get('/api/releases', requireAuth, async (req, res) => {
       n.updated_at AS note_updated_at,
       rbt.song_id AS best_song_id,
       bs.title AS best_song_title,
+      CASE WHEN uhr.release_id IS NOT NULL THEN 1 ELSE 0 END AS is_hidden,
       (SELECT COUNT(*) FROM release_songs rs WHERE rs.release_id = r.id) AS track_count,
       (
         SELECT COUNT(*) FROM release_songs rs
@@ -1224,13 +1259,133 @@ app.get('/api/releases', requireAuth, async (req, res) => {
     LEFT JOIN notes n ON n.user_id = ? AND n.target_type = 'release' AND n.target_id = r.id
     LEFT JOIN release_best_tracks rbt ON rbt.release_id = r.id AND rbt.user_id = ?
     LEFT JOIN songs bs ON bs.id = rbt.song_id
+    LEFT JOIN user_hidden_releases uhr ON uhr.release_id = r.id AND uhr.user_id = ?
     WHERE ${where.join(' AND ')}
-    ORDER BY ${orderClause}
+    ORDER BY ${finalOrderClause}
   `;
 
-  const rows = await db.all<Record<string, unknown>>(sql, params);
+  const [rows, hiddenCountRow] = await Promise.all([
+    db.all<Record<string, unknown>>(sql, params),
+    db.get<{ cnt: number }>(
+      `SELECT COUNT(*) AS cnt
+       FROM user_hidden_releases uhr
+       JOIN releases r ON r.id = uhr.release_id
+       JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?
+       WHERE uhr.user_id = ? ${artistId ? 'AND r.artist_id = ?' : ''}`,
+      artistId ? [userId, userId, artistId] : [userId, userId]
+    ),
+  ]);
   const releases = mapReleaseRows(rows);
-  res.json({ total: releases.length, releases });
+  res.json({
+    total: releases.length,
+    hiddenTotal: Number(hiddenCountRow?.cnt || 0),
+    releases,
+  });
+});
+
+app.put('/api/releases/visibility/bulk', requireAuth, async (req, res) => {
+  const db = await getDb();
+  const userId = req.user!.id;
+  const mode = req.body?.mode;
+  if (mode !== 'keep_selected' && mode !== 'hide_selected') {
+    res.status(400).json({ error: 'Некоректний режим масового керування.' });
+    return;
+  }
+
+  const rawSelected: unknown[] = Array.isArray(req.body?.selectedReleaseIds)
+    ? req.body.selectedReleaseIds
+    : [];
+  const selectedIds = Array.from(
+    new Set(rawSelected.map(Number).filter((id) => Number.isInteger(id) && id > 0))
+  );
+
+  const rawScoped: unknown[] = Array.isArray(req.body?.scopedReleaseIds)
+    ? req.body.scopedReleaseIds
+    : [];
+  let scopedIds = Array.from(
+    new Set(rawScoped.map(Number).filter((id) => Number.isInteger(id) && id > 0))
+  );
+
+  const userReleaseRows = await db.all<{ id: number }>(
+    `SELECT r.id FROM releases r
+     JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?`,
+    [userId]
+  );
+  const ownedSet = new Set(userReleaseRows.map((r) => Number(r.id)));
+
+  if (scopedIds.length === 0) {
+    scopedIds = Array.from(ownedSet);
+  } else {
+    scopedIds = scopedIds.filter((id) => ownedSet.has(id));
+  }
+  const selectedSet = new Set(selectedIds.filter((id) => ownedSet.has(id)));
+
+  const toKeep: number[] = [];
+  const toHide: number[] = [];
+  for (const id of scopedIds) {
+    const isSel = selectedSet.has(id);
+    if (mode === 'keep_selected') {
+      if (isSel) toKeep.push(id);
+      else toHide.push(id);
+    } else {
+      if (isSel) toHide.push(id);
+      else toKeep.push(id);
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const stmts = [
+    ...toKeep.map((rid) => ({
+      sql: `DELETE FROM user_hidden_releases WHERE user_id = ? AND release_id = ?`,
+      args: [userId, rid],
+    })),
+    ...toHide.map((rid) => ({
+      sql: `INSERT OR IGNORE INTO user_hidden_releases (user_id, release_id, created_at) VALUES (?, ?, ?)`,
+      args: [userId, rid, nowIso],
+    })),
+  ];
+
+  if (stmts.length > 0) {
+    await db.batch(stmts);
+  }
+
+  res.json({ ok: true, visibleCount: toKeep.length, hiddenCount: toHide.length });
+});
+
+app.put('/api/releases/:id/hidden', requireAuth, async (req, res) => {
+  const db = await getDb();
+  const userId = req.user!.id;
+  const releaseId = Number(req.params.id);
+  if (!Number.isInteger(releaseId) || releaseId <= 0) {
+    res.status(400).json({ error: 'Некоректний ідентифікатор релізу.' });
+    return;
+  }
+
+  const relExists = await db.get(
+    `SELECT r.id FROM releases r
+     JOIN user_artists ua ON ua.artist_id = r.artist_id AND ua.user_id = ?
+     WHERE r.id = ?`,
+    [userId, releaseId]
+  );
+  if (!relExists) {
+    res.status(404).json({ error: 'Реліз не знайдено.' });
+    return;
+  }
+
+  const hidden = Boolean(req.body?.hidden);
+  if (hidden) {
+    await db.run(
+      `INSERT OR IGNORE INTO user_hidden_releases (user_id, release_id, created_at) VALUES (?, ?, ?)`,
+      [userId, releaseId, new Date().toISOString()]
+    );
+  } else {
+    await db.run(`DELETE FROM user_hidden_releases WHERE user_id = ? AND release_id = ?`, [
+      userId,
+      releaseId,
+    ]);
+  }
+
+  res.json({ ok: true, releaseId, hidden });
 });
 
 app.get('/api/releases/:idOrSlug', requireAuth, async (req, res) => {
@@ -1251,6 +1406,7 @@ app.get('/api/releases/:idOrSlug', requireAuth, async (req, res) => {
       n.updated_at AS note_updated_at,
       rbt.song_id AS best_song_id,
       bs.title AS best_song_title,
+      CASE WHEN uhr.release_id IS NOT NULL THEN 1 ELSE 0 END AS is_hidden,
       (SELECT COUNT(*) FROM release_songs rs WHERE rs.release_id = r.id) AS track_count,
       (
         SELECT COUNT(*) FROM release_songs rs
@@ -1269,9 +1425,10 @@ app.get('/api/releases/:idOrSlug', requireAuth, async (req, res) => {
     LEFT JOIN notes n ON n.user_id = ? AND n.target_type = 'release' AND n.target_id = r.id
     LEFT JOIN release_best_tracks rbt ON rbt.release_id = r.id AND rbt.user_id = ?
     LEFT JOIN songs bs ON bs.id = rbt.song_id
+    LEFT JOIN user_hidden_releases uhr ON uhr.release_id = r.id AND uhr.user_id = ?
     WHERE ${isNum ? 'r.id = ?' : 'r.slug = ?'}
   `,
-    [userId, userId, userId, userId, userId, userId, isNum ? Number(key) : key]
+    [userId, userId, userId, userId, userId, userId, userId, isNum ? Number(key) : key]
   );
 
   if (!relRow) {
@@ -1574,6 +1731,14 @@ app.get('/api/export/userdata', requireAuth, async (req, res) => {
      WHERE rbt.user_id = ?`,
     [userId]
   );
+  const hiddenReleases = await db.all(
+    `SELECT a.slug AS artist_slug, r.slug AS release_slug, uhr.created_at
+     FROM user_hidden_releases uhr
+     JOIN releases r ON r.id = uhr.release_id
+     JOIN artists a ON a.id = r.artist_id
+     WHERE uhr.user_id = ?`,
+    [userId]
+  );
   const songNotesRaw = await db.all<{
     artist_slug: string;
     canonical_key: string;
@@ -1603,10 +1768,11 @@ app.get('/api/export/userdata', requireAuth, async (req, res) => {
 
   res.json({
     exported_at: new Date().toISOString(),
-    version: 4,
+    version: 5,
     songRatings,
     releaseRatings,
     releaseBestTracks,
+    hiddenReleases,
     songNotes: songNotesRaw.map((n) => ({
       artist_slug: n.artist_slug,
       canonical_key: n.canonical_key,
@@ -1689,6 +1855,19 @@ app.post('/api/import/userdata', requireAuth, async (req, res) => {
           `INSERT INTO release_best_tracks (user_id, release_id, song_id, updated_at) VALUES (?, ?, ?, ?)
            ON CONFLICT(user_id, release_id) DO UPDATE SET song_id = excluded.song_id, updated_at = excluded.updated_at`,
           [userId, r.id, s.id, item.updated_at || new Date().toISOString()]
+        );
+      }
+    }
+    for (const item of payload.hiddenReleases || []) {
+      const r =
+        (await db.get<{ id: number }>('SELECT id FROM releases WHERE slug = ?', [item.release_slug])) ||
+        (await db.get<{ id: number }>('SELECT id FROM releases WHERE slug = ?', [
+          `mother-mother--${item.release_slug}`,
+        ]));
+      if (r) {
+        await db.run(
+          `INSERT OR IGNORE INTO user_hidden_releases (user_id, release_id, created_at) VALUES (?, ?, ?)`,
+          [userId, r.id, item.created_at || new Date().toISOString()]
         );
       }
     }

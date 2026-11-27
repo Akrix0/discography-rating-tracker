@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { ExternalLink, Loader2, Music, Play } from 'lucide-react';
 import { usePreferences } from '../context/PreferencesContext';
+import { Tooltip } from './Tooltip';
 
 export type EmbedLoadMode = 'auto' | 'click';
 const EMBED_MODE_KEY = 'discography_embed_mode';
@@ -253,17 +254,18 @@ function SpotifyEmbedInner({
         )}
       </div>
 
-      <a
-        href={externalLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={t.openInSpotify}
-        aria-label={t.openInSpotify}
-        className="w-9 h-9 sm:w-auto sm:h-10 sm:px-2.5 rounded-lg bg-[#1a1d27] border border-white/10 text-xs font-medium text-[#1DB954] hover:bg-[#1DB954]/15 hover:border-[#1DB954]/40 inline-flex items-center justify-center gap-1.5 transition-colors shrink-0"
-      >
-        <span className="hidden sm:inline">Spotify</span>
-        <ExternalLink className="w-3.5 h-3.5" />
-      </a>
+      <Tooltip content={t.openInSpotify} align="end">
+        <a
+          href={externalLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t.openInSpotify}
+          className="w-9 h-9 sm:w-auto sm:h-10 sm:px-2.5 rounded-lg bg-[#1a1d27] border border-white/10 text-xs font-medium text-[#1DB954] hover:bg-[#1DB954]/15 hover:border-[#1DB954]/40 inline-flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] shrink-0"
+        >
+          <span className="hidden sm:inline">Spotify</span>
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </Tooltip>
     </div>
   );
 }

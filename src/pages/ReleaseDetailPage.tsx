@@ -5,8 +5,11 @@ import {
   Calendar,
   Disc3,
   ExternalLink,
+  Eye,
+  EyeOff,
   Info,
   ListMusic,
+  Loader2,
   Radio,
   Trophy,
 } from 'lucide-react';
@@ -17,6 +20,8 @@ import { CATEGORY_LABELS, RELEASE_TYPE_I18N } from '../i18n/translations';
 import { CATEGORY_META, type ReleaseDetail } from '../types';
 import { RatingControl } from '../components/RatingControl';
 import { SongRow } from '../components/SongRow';
+import { Tooltip } from '../components/Tooltip';
+import { btnSecondary } from '../components/ui/buttonStyles';
 
 export function ReleaseDetailPage() {
   const { idOrSlug } = useParams();
@@ -27,6 +32,7 @@ export function ReleaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showAlbumPlayer, setShowAlbumPlayer] = useState(false);
   const [bestTrackBusyId, setBestTrackBusyId] = useState<number | null>(null);
+  const [hideBusy, setHideBusy] = useState(false);
 
   const loadRelease = useCallback(async () => {
     if (!idOrSlug) return;
@@ -249,12 +255,45 @@ export function ReleaseDetailPage() {
                   <button
                     type="button"
                     onClick={() => setShowAlbumPlayer((v) => !v)}
-                    className="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-xs sm:text-sm font-medium text-[#f3efe6] inline-flex items-center gap-2 transition-colors"
+                    className={`${btnSecondary} w-full sm:w-auto px-4 py-2 text-xs sm:text-sm`}
                   >
                     <Radio className="w-4 h-4 text-[#e09f5a]" />
                     <span>{showAlbumPlayer ? t.hideAlbumPlayer : t.showAlbumPlayer}</span>
                   </button>
                 )}
+                <Tooltip
+                  content={release.is_hidden ? t.restoreReleaseTooltip : t.hideReleaseTooltip}
+                >
+                  <button
+                    type="button"
+                    disabled={hideBusy}
+                    onClick={async () => {
+                      const nextHidden = !release.is_hidden;
+                      setHideBusy(true);
+                      try {
+                        await api.setReleaseHidden(release.id, nextHidden);
+                        setRelease((prev) => (prev ? { ...prev, is_hidden: nextHidden } : prev));
+                        void refreshArtists();
+                      } finally {
+                        setHideBusy(false);
+                      }
+                    }}
+                    className={
+                      release.is_hidden
+                        ? 'w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-[#5fb38e]/15 hover:bg-[#5fb38e]/25 border border-[#5fb38e]/35 text-xs sm:text-sm font-semibold text-[#5fb38e] inline-flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer'
+                        : `${btnSecondary} w-full sm:w-auto px-4 py-2 text-xs sm:text-sm`
+                    }
+                  >
+                    {hideBusy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : release.is_hidden ? (
+                      <Eye className="w-4 h-4" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-[#9ca3af]" />
+                    )}
+                    <span>{release.is_hidden ? t.restoreReleaseBtn : t.hideReleaseBtn}</span>
+                  </button>
+                </Tooltip>
               </div>
             </div>
 

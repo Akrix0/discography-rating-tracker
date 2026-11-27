@@ -5,6 +5,8 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import type { NotificationItem } from '../types';
+import { Tooltip } from './Tooltip';
+import { btnIcon } from './ui/buttonStyles';
 
 export function NotificationBell() {
   const { user } = useAuth();
@@ -179,31 +181,30 @@ export function NotificationBell() {
 
   return (
     <div ref={containerRef} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => {
-          setOpen((v) => !v);
-          setLiveToast(null);
-        }}
-        title={t.notificationsTitle}
-        aria-label={t.notificationsTitle}
-        aria-expanded={open}
-        className={`w-8 h-8 rounded-lg border flex items-center justify-center relative transition-colors ${
-          open
-            ? 'bg-[#e09f5a]/20 text-[#e09f5a] border-[#e09f5a]/45'
-            : 'bg-[#13151c] hover:bg-[#1a1d27] text-[#9ca3af] hover:text-[#f3efe6] border-white/10'
-        }`}
-      >
-        <Bell className="w-4 h-4" />
-        {unreadCount > 0 && (
-          <span
-            data-testid="notif-unread-badge"
-            className="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-[#d95d4e] text-white text-[10px] font-bold font-mono-num flex items-center justify-center shadow"
-          >
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
+      <Tooltip content={t.notificationsTitle} position="bottom" align="end">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen((v) => !v);
+            setLiveToast(null);
+          }}
+          aria-label={t.notificationsTitle}
+          aria-expanded={open}
+          className={`${btnIcon} relative ${
+            open ? 'bg-[#e09f5a]/20 text-[#e09f5a] border-[#e09f5a]/45' : ''
+          }`}
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span
+              data-testid="notif-unread-badge"
+              className="absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-[#d95d4e] text-white text-[10px] font-bold font-mono-num flex items-center justify-center shadow"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </Tooltip>
 
       {open && (
         <div

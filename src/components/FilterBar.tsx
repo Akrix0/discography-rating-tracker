@@ -9,6 +9,8 @@ import {
   type FilterState,
   type ReleaseType,
 } from '../types';
+import { Tooltip } from './Tooltip';
+import { btnSecondary } from './ui/buttonStyles';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -118,15 +120,17 @@ export function FilterBar({
         </div>
 
         <div className="md:col-span-2 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onReset}
-            disabled={!hasActiveFilters}
-            className="w-full h-10 px-3 rounded-xl border border-white/10 text-xs sm:text-sm font-medium inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-white/[0.03] hover:bg-white/[0.08] text-[#f3efe6]"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>{t.resetShort}</span>
-          </button>
+          <Tooltip content={t.resetFiltersTooltip} align="end" className="w-full">
+            <button
+              type="button"
+              onClick={onReset}
+              disabled={!hasActiveFilters}
+              className={`${btnSecondary} w-full h-10 px-3 text-xs sm:text-sm`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{t.resetShort}</span>
+            </button>
+          </Tooltip>
         </div>
       </div>
 

@@ -40,6 +40,7 @@ function buildFilterParams(f: FilterState, artistId: number | null): string {
   const params = new URLSearchParams();
   if (artistId) params.set('artistId', String(artistId));
   if (f.hideSecondary) params.set('hideSecondary', '1');
+  if (f.hiddenFilter && f.hiddenFilter !== 'visible') params.set('hiddenFilter', f.hiddenFilter);
   if (f.q.trim()) params.set('q', f.q.trim());
   if (f.categories.length > 0) params.set('categories', f.categories.join(','));
   if (f.releaseTypes.length > 0) params.set('releaseTypes', f.releaseTypes.join(','));
@@ -118,11 +119,27 @@ export const api = {
   getSongs: (filters: FilterState, artistId: number | null) =>
     request<{ total: number; songs: Song[] }>(`/api/songs?${buildFilterParams(filters, artistId)}`),
   getReleases: (filters: FilterState, artistId: number | null) =>
-    request<{ total: number; releases: Release[] }>(
+    request<{ total: number; hiddenTotal: number; releases: Release[] }>(
       `/api/releases?${buildFilterParams(filters, artistId)}`
     ),
   getReleaseDetail: (idOrSlug: string | number) =>
     request<ReleaseDetail>(`/api/releases/${idOrSlug}`),
+
+  setReleaseHidden: (releaseId: number, hidden: boolean) =>
+    request<{ ok: boolean; releaseId: number; hidden: boolean }>(
+      `/api/releases/${releaseId}/hidden`,
+      { method: 'PUT', body: JSON.stringify({ hidden }) }
+    ),
+
+  bulkUpdateReleaseVisibility: (payload: {
+    mode: 'keep_selected' | 'hide_selected';
+    selectedReleaseIds: number[];
+    scopedReleaseIds?: number[];
+  }) =>
+    request<{ ok: boolean; visibleCount: number; hiddenCount: number }>(
+      '/api/releases/visibility/bulk',
+      { method: 'PUT', body: JSON.stringify(payload) }
+    ),
 
   saveSongRating: (songId: number, rating: number | null) =>
     request<{ songId: number; rating: number | null; updatedAt: string }>(

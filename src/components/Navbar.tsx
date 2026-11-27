@@ -3,6 +3,8 @@ import { Activity, BarChart3, Disc3, HeartHandshake, LogOut, Music2, Settings, U
 import { ArtistDropdown } from './ArtistDropdown';
 import { NotificationBell } from './NotificationBell';
 import { PreferencesToggle } from './PreferencesToggle';
+import { Tooltip } from './Tooltip';
+import { btnIcon } from './ui/buttonStyles';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 
@@ -67,31 +69,34 @@ export function Navbar() {
             <HeartHandshake className="w-4 h-4 shrink-0" />
             <span>{t.navFriends}</span>
           </NavLink>
-          <NavLink to="/settings" title={t.navSettings} aria-label={t.navSettings} className={desktopLinkClass}>
-            <Settings className="w-4 h-4 shrink-0" />
-            <span className="hidden xl:inline">{t.navSettingsShort}</span>
-          </NavLink>
+          <Tooltip content={t.navSettings} position="bottom">
+            <NavLink to="/settings" aria-label={t.navSettings} className={desktopLinkClass}>
+              <Settings className="w-4 h-4 shrink-0" />
+              <span className="hidden xl:inline">{t.navSettingsShort}</span>
+            </NavLink>
+          </Tooltip>
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {user?.isAdmin && (
-            <NavLink
-              to="/admin"
-              title={t.navAdmin}
-              aria-label={t.navAdmin}
-              className={({ isActive }) =>
-                `w-8 h-8 rounded-lg border inline-flex items-center justify-center transition-colors shrink-0 ${
-                  isActive
-                    ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
-                    : 'bg-[#13151c] text-[#9ca3af] hover:text-[#f3efe6] border-white/10 hover:bg-white/10'
-                }`
-              }
-            >
-              <span className="relative flex items-center justify-center">
-                <Activity className="w-4 h-4 shrink-0 text-[#5fb38e]" />
-                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#5fb38e]" />
-              </span>
-            </NavLink>
+            <Tooltip content={t.navAdmin} position="bottom" align="end">
+              <NavLink
+                to="/admin"
+                aria-label={t.navAdmin}
+                className={({ isActive }) =>
+                  `${btnIcon} ${
+                    isActive
+                      ? 'bg-[#5fb38e]/20 text-[#5fb38e] border-[#5fb38e]/45'
+                      : ''
+                  }`
+                }
+              >
+                <span className="relative flex items-center justify-center">
+                  <Activity className="w-4 h-4 shrink-0 text-[#5fb38e]" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#5fb38e]" />
+                </span>
+              </NavLink>
+            </Tooltip>
           )}
 
           <PreferencesToggle />
@@ -100,40 +105,42 @@ export function Navbar() {
 
           {user && (
             <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 sm:pl-1.5 sm:pr-1 sm:py-0.5 rounded-xl bg-[#13151c] border border-white/[0.08] min-w-0 shrink-0">
-              <NavLink
-                to="/profile"
-                title={t.navProfile}
-                aria-label={t.navProfile}
-                className={({ isActive }) =>
-                  `flex items-center gap-1.5 px-1 py-0.5 rounded-lg transition-colors min-w-0 ${
-                    isActive ? 'bg-white/10 text-[#e09f5a]' : 'hover:bg-white/10 text-[#e5e0d5]'
-                  }`
-                }
-              >
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.displayName}
-                    className="w-6 h-6 rounded-full object-cover shrink-0 border border-white/15"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-[#d95d4e]/25 text-[#d95d4e] text-[11px] font-bold flex items-center justify-center uppercase shrink-0">
-                    {user.displayName.slice(0, 1)}
-                  </div>
-                )}
-                <span className="hidden xl:inline text-xs font-medium max-w-[84px] truncate">
-                  {user.displayName}
-                </span>
-              </NavLink>
-              <button
-                type="button"
-                onClick={() => void logout()}
-                title={t.logoutTitle}
-                aria-label={t.logoutTitle}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#9ca3af] hover:text-[#d95d4e] hover:bg-white/10 transition-colors shrink-0"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
+              <Tooltip content={t.navProfile} position="bottom" align="end">
+                <NavLink
+                  to="/profile"
+                  aria-label={t.navProfile}
+                  className={({ isActive }) =>
+                    `flex items-center gap-1.5 px-1 py-0.5 rounded-lg transition-colors min-w-0 ${
+                      isActive ? 'bg-white/10 text-[#e09f5a]' : 'hover:bg-white/10 text-[#e5e0d5]'
+                    }`
+                  }
+                >
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.displayName}
+                      className="w-6 h-6 rounded-full object-cover shrink-0 border border-white/15"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-[#d95d4e]/25 text-[#d95d4e] text-[11px] font-bold flex items-center justify-center uppercase shrink-0">
+                      {user.displayName.slice(0, 1)}
+                    </div>
+                  )}
+                  <span className="hidden xl:inline text-xs font-medium max-w-[84px] truncate">
+                    {user.displayName}
+                  </span>
+                </NavLink>
+              </Tooltip>
+              <Tooltip content={t.logoutTitle} position="bottom" align="end">
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  aria-label={t.logoutTitle}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[#9ca3af] hover:text-[#d95d4e] hover:bg-white/10 transition-all active:scale-[0.96] shrink-0 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>

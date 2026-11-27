@@ -18,6 +18,8 @@ import { usePreferences } from '../context/PreferencesContext';
 import type { GlobalStatsResponse } from '../types';
 import { SongRow } from '../components/SongRow';
 import { ReleaseCard } from '../components/ReleaseCard';
+import { Tooltip } from '../components/Tooltip';
+import { btnDanger, btnPrimary, btnSecondary } from '../components/ui/buttonStyles';
 import {
   canMoveWithinSameRating,
   hasAnyTiedRating,
@@ -258,38 +260,44 @@ export function ArtistsHubPage() {
                   <button
                     type="button"
                     onClick={() => handleOpenArtist(artist.id)}
-                    className="flex-1 min-w-0 h-9 px-2.5 rounded-xl bg-white/[0.06] hover:bg-[#d95d4e] hover:text-white text-xs font-semibold text-[#f3efe6] transition-colors truncate"
+                    className={`${btnSecondary} flex-1 min-w-0 h-9 px-2.5 text-xs font-semibold hover:bg-[#d95d4e] hover:text-white hover:border-transparent truncate`}
                   >
                     {t.openOverview}
                   </button>
-                  <button
-                    type="button"
-                    disabled={syncingArtistId !== null}
-                    onClick={() => handleSyncArtist(artist.id)}
-                    title={t.checkUpdatesTitle}
-                    className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-xs text-[#d1d5db] inline-flex items-center gap-1.5 disabled:opacity-40"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">{t.refresh}</span>
-                  </button>
+                  <Tooltip content={t.checkUpdatesTitle} align="end">
+                    <button
+                      type="button"
+                      disabled={syncingArtistId !== null}
+                      onClick={() => handleSyncArtist(artist.id)}
+                      aria-label={t.checkUpdatesTitle}
+                      className={`${btnSecondary} h-9 px-3 text-xs text-[#d1d5db]`}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <span className="hidden sm:inline">{t.refresh}</span>
+                    </button>
+                  </Tooltip>
 
                   {isConfirmingDel ? (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteArtist(artist.id)}
-                      className="h-9 px-3 rounded-xl bg-[#d95d4e] text-white text-xs font-semibold"
-                    >
-                      {t.confirmDelete}
-                    </button>
+                    <Tooltip content={t.deleteArtistDangerTooltip} align="end">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteArtist(artist.id)}
+                        className={`${btnPrimary} h-9 px-3 text-xs`}
+                      >
+                        {t.confirmDelete}
+                      </button>
+                    </Tooltip>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteId(artist.id)}
-                      title={t.deleteArtistTitle}
-                      className="h-9 w-9 rounded-xl bg-white/[0.04] hover:bg-[#d95d4e]/20 border border-white/10 hover:border-[#d95d4e]/40 text-[#9ca3af] hover:text-[#e87c6f] flex items-center justify-center transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <Tooltip content={t.deleteArtistDangerTooltip} align="end">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(artist.id)}
+                        aria-label={t.deleteArtistTitle}
+                        className={`${btnDanger} h-9 w-9`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </Tooltip>
                   )}
                 </div>
               </div>

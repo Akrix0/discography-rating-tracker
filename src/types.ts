@@ -247,6 +247,7 @@ export interface Release {
   average_track_rating: number | null;
   best_song_id: number | null;
   best_song_title: string | null;
+  is_hidden?: boolean;
 }
 
 export interface ReleaseTrack extends Song {
@@ -310,6 +311,7 @@ export interface FilterState {
   maxRating: number;
   year: string;
   hideSecondary: boolean;
+  hiddenFilter?: 'visible' | 'hidden' | 'all';
   sortBy: 'release_date' | 'title' | 'rating' | 'created_at';
   sortDir: 'asc' | 'desc';
 }

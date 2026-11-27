@@ -6,6 +6,7 @@ import { CATEGORY_LABELS } from '../i18n/translations';
 import { CATEGORY_META, type Song } from '../types';
 import { RatingControl } from './RatingControl';
 import { SpotifyEmbed } from './SpotifyEmbed';
+import { Tooltip } from './Tooltip';
 
 interface SongRowProps {
   song: Song;
@@ -79,32 +80,34 @@ export function SongRow({
         <div className="lg:col-span-4 flex items-start gap-2.5 sm:gap-3.5 min-w-0">
           {showReorderControls && (
             <div className="flex flex-col items-center gap-0.5 pt-0.5 shrink-0">
-              <button
-                type="button"
-                disabled={!canMoveUp}
-                onClick={onMoveUp}
-                title={t.moveUpTitle}
-                aria-label={t.moveUpTitle}
-                className="w-6 h-5 rounded bg-white/[0.04] hover:bg-[#e09f5a]/20 text-[#9ca3af] hover:text-[#e09f5a] disabled:opacity-25 disabled:pointer-events-none flex items-center justify-center border border-white/[0.08] transition-colors"
-              >
-                <ChevronUp className="w-3.5 h-3.5" />
-              </button>
+              <Tooltip content={canMoveUp ? t.moveUpTitle : null} align="start">
+                <button
+                  type="button"
+                  disabled={!canMoveUp}
+                  onClick={onMoveUp}
+                  aria-label={t.moveUpTitle}
+                  className="w-6 h-5 rounded bg-white/[0.04] hover:bg-[#e09f5a]/20 text-[#9ca3af] hover:text-[#e09f5a] disabled:opacity-25 disabled:pointer-events-none flex items-center justify-center border border-white/[0.08] transition-colors cursor-pointer"
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
               <span
                 title={t.reorderSameScoreHint}
                 className="text-[#6b7280] cursor-grab active:cursor-grabbing py-0.5"
               >
                 <GripVertical className="w-3.5 h-3.5" />
               </span>
-              <button
-                type="button"
-                disabled={!canMoveDown}
-                onClick={onMoveDown}
-                title={t.moveDownTitle}
-                aria-label={t.moveDownTitle}
-                className="w-6 h-5 rounded bg-white/[0.04] hover:bg-[#e09f5a]/20 text-[#9ca3af] hover:text-[#e09f5a] disabled:opacity-25 disabled:pointer-events-none flex items-center justify-center border border-white/[0.08] transition-colors"
-              >
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
+              <Tooltip content={canMoveDown ? t.moveDownTitle : null} position="bottom" align="start">
+                <button
+                  type="button"
+                  disabled={!canMoveDown}
+                  onClick={onMoveDown}
+                  aria-label={t.moveDownTitle}
+                  className="w-6 h-5 rounded bg-white/[0.04] hover:bg-[#e09f5a]/20 text-[#9ca3af] hover:text-[#e09f5a] disabled:opacity-25 disabled:pointer-events-none flex items-center justify-center border border-white/[0.08] transition-colors cursor-pointer"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
             </div>
           )}
 
