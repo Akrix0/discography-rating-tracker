@@ -155,18 +155,22 @@ export async function fetchFullArtistCatalogSpotifyApi(
   onProgress?: (processed: number, total: number) => void
 ): Promise<RawSpotifyApiAlbum[]> {
   let nextUrl: string | null =
-    `https://api.spotify.com/v1/artists/${spotifyId}/albums?include_groups=album,single&limit=50`;
+    `https://api.spotify.com/v1/artists/${spotifyId}/albums?include_groups=album,single,compilation&limit=50`;
   const albumIds: string[] = [];
   const seen = new Set<string>();
 
   while (nextUrl) {
     type AlbumPage = {
-      items?: { id: string; artists?: { id: string }[] }[];
+      items?: { id: string; album_group?: string; artists?: { id: string }[] }[];
       next: string | null;
     };
     const page: AlbumPage = await spotifyGet<AlbumPage>(db, nextUrl, userId);
     for (const item of page.items || []) {
-      const hasArtist = (item.artists || []).some((a) => a.id === spotifyId);
+      const artists = item.artists || [];
+      const hasArtist =
+        item.album_group === 'compilation'
+          ? artists[0]?.id === spotifyId
+          : artists.some((a) => a.id === spotifyId);
       if (hasArtist && !seen.has(item.id)) {
         seen.add(item.id);
         albumIds.push(item.id);
@@ -174,6 +178,15 @@ export async function fetchFullArtistCatalogSpotifyApi(
     }
     nextUrl = page.next;
   }
+
+  type SpotifyTrackItem = {
+    id: string;
+    name: string;
+    track_number: number;
+    disc_number: number;
+    duration_ms: number;
+    explicit: boolean;
+  };
 
   const results: RawSpotifyApiAlbum[] = [];
   for (let i = 0; i < albumIds.length; i += 20) {
@@ -186,27 +199,40 @@ export async function fetchFullArtistCatalogSpotifyApi(
         release_date: string | null;
         images: { url: string; width: number }[];
         tracks?: {
-          items?: {
-            id: string;
-            name: string;
-            track_number: number;
-            disc_number: number;
-            duration_ms: number;
-            explicit: boolean;
-          }[];
+          items?: SpotifyTrackItem[];
+          next?: string | null;
         };
       }[];
     }>(db, `https://api.spotify.com/v1/albums?ids=${batch.join(',')}`, userId);
 
     for (const alb of data.albums || []) {
       if (!alb) continue;
+      const allTrackItems: SpotifyTrackItem[] = [...(alb.tracks?.items || [])];
+      let nextTracksUrl: string | null = alb.tracks?.next || null;
+      let extraPages = 0;
+      while (nextTracksUrl && extraPages < 6) {
+        try {
+          const trackPage = await spotifyGet<{
+            items?: SpotifyTrackItem[];
+            next?: string | null;
+          }>(db, nextTracksUrl, userId);
+          if (trackPage.items?.length) {
+            allTrackItems.push(...trackPage.items);
+          }
+          nextTracksUrl = trackPage.next || null;
+          extraPages++;
+        } catch {
+          break;
+        }
+      }
+
       results.push({
         id: alb.id,
         name: alb.name,
         album_type: alb.album_type,
         release_date: alb.release_date || null,
         images: alb.images || [],
-        tracks: (alb.tracks?.items || []).map((t) => ({
+        tracks: allTrackItems.map((t) => ({
           track_number: t.track_number,
           disc_number: t.disc_number || 1,
           title: t.name,

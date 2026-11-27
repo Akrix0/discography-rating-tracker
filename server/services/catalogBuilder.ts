@@ -99,7 +99,26 @@ function parseReleaseYear(dateStr: string | null): number | null {
   return m ? Number(m[1]) : null;
 }
 
-function classifyRelease(
+function isStudioMasterMixTag(tag: string): boolean {
+  const s = (tag || '').trim();
+  if (!s) return false;
+  if (
+    /\b(acoustic|demo|live|take\s+\d+|sped up|slowed|instrumental|mashup|smashup|karaoke|club remix|dub mix)\b/i.test(
+      s
+    )
+  ) {
+    return false;
+  }
+  return (
+    /\b(remaster(ed)?|stereo(\s+mix)?|mono(\s+mix)?|dolby\s+atmos|spatial\s+audio|anthology\s+version|naked\s+version|original\s+mix|album\s+mix|single\s+mix|giles\s+martin)\b/i.test(
+      s
+    ) ||
+    /\b(19|20)\d{2}\s+(re)?mix\b/i.test(s) ||
+    /\b(re)?mix\s+(19|20)\d{2}\b/i.test(s)
+  );
+}
+
+export function classifyRelease(
   title: string,
   rawType: string,
   trackCount: number
@@ -111,7 +130,7 @@ function classifyRelease(
   if (/\blive\b|\blive sessions?\b|\blive from\b|\bunplugged\b/i.test(t)) {
     return { category: 'Live Versions', releaseType: 'live' };
   }
-  if (/\bremix(es)?\b|\bmix\b/i.test(t) && !/\bmixtape\b/i.test(t)) {
+  if (/\bremix(es)?\b|\bmix\b/i.test(t) && !/\bmixtape\b/i.test(t) && !isStudioMasterMixTag(title)) {
     return { category: 'Remixes', releaseType: 'single' };
   }
   if (/\bsped up\b|\bslowed\b|\bacoustic\b|\bdemo(s)?\b|\binstrumental\b|\bnightcore\b/i.test(t)) {
@@ -124,12 +143,24 @@ function classifyRelease(
     return { category: 'Covers', releaseType: trackCount <= 2 ? 'single' : 'album' };
   }
 
-  const isDeluxe = /\b(deluxe|extended|expanded|anniversary|complete edition|special edition|reissue)\b/i.test(
+  const isDeluxe = /\b(deluxe|extended|expanded|anniversary|complete edition|special edition|reissue|super deluxe)\b/i.test(
     title
   );
   const hasEpWord = /\bep\b|\bmini[- ]?album\b/i.test(t);
   if (/\bspotify singles\b/i.test(t)) {
     return { category: 'Singles', releaseType: 'single' };
+  }
+  const isCompilation =
+    rawType === 'compile' ||
+    rawType === 'compilation' ||
+    /\b(greatest hits|best of|anthology|past masters|complete recordings|singles collection|the essential|essential|box set|19\d{2}\s*[-–]\s*(?:19|20)\d{2}|20\d{2}\s*[-–]\s*20\d{2})\b/i.test(
+      title
+    );
+  if (isCompilation && trackCount >= 4) {
+    return {
+      category: 'Studio Albums',
+      releaseType: 'compilation',
+    };
   }
   if (rawType === 'album' || (trackCount >= 7 && !hasEpWord)) {
     return {
@@ -149,16 +180,25 @@ function classifyRelease(
   return { category: 'Other', releaseType: 'other' };
 }
 
-function parseTrackVersion(trackTitle: string, release: RawRelease) {
+export function parseTrackVersion(trackTitle: string, release: Pick<RawRelease, 'category' | 'release_type' | 'title'>) {
   let raw = (trackTitle || '').trim();
   let versionTag: string | null = null;
+
+  // Strip studio remaster suffixes first so canonical titles merge cleanly
+  raw = raw
+    .replace(/\s+-\s+(?:remaster(?:ed)?(?:\s+\d{4})?|\d{4}\s+digital\s+remaster|\d{4}\s+remaster)$/i, '')
+    .replace(/\s*\((?:remaster(?:ed)?(?:\s+\d{4})?|\d{4}\s+(?:digital\s+)?remaster)\)\s*$/i, '')
+    .trim();
 
   const dashMatch = raw.match(
     /^(.*?)\s+-\s+(Sped Up|Slowed Down|Slowed|Acoustic|Chill Version|Spotify Singles|Live.*|Demo|.*Remix|.*Mix|SMASHUP|Instrumental|Radio Edit|Extended.*)$/i
   );
   if (dashMatch) {
     raw = dashMatch[1].trim();
-    versionTag = dashMatch[2].trim();
+    const candidateTag = dashMatch[2].trim();
+    if (!isStudioMasterMixTag(candidateTag)) {
+      versionTag = candidateTag;
+    }
   }
 
   const parenMatch = raw.match(
@@ -166,7 +206,10 @@ function parseTrackVersion(trackTitle: string, release: RawRelease) {
   );
   if (parenMatch) {
     raw = parenMatch[1].trim();
-    versionTag = versionTag ? `${parenMatch[2].trim()} / ${versionTag}` : parenMatch[2].trim();
+    const candidateTag = parenMatch[2].trim();
+    if (!isStudioMasterMixTag(candidateTag)) {
+      versionTag = versionTag ? `${candidateTag} / ${versionTag}` : candidateTag;
+    }
   }
 
   if (release.category === 'Live Versions' && (!versionTag || !/live/i.test(versionTag))) {
@@ -191,10 +234,10 @@ function parseTrackVersion(trackTitle: string, release: RawRelease) {
   };
 }
 
-function determineSongCategory(versionTag: string | null, releaseCategory: Category): Category {
+export function determineSongCategory(versionTag: string | null, releaseCategory: Category): Category {
   const v = (versionTag || '').toLowerCase();
   if (v.includes('smashup') || v.includes('mashup')) return 'Mashups';
-  if (v.includes('remix') || v.includes('mix')) return 'Remixes';
+  if ((v.includes('remix') || v.includes('mix')) && !isStudioMasterMixTag(v)) return 'Remixes';
   if (v.includes('live')) return 'Live Versions';
   if (
     v.includes('sped up') ||
@@ -254,6 +297,7 @@ async function hydrateSpotifyEmbedAlbum(
         };
       }
     );
+    if (tracks.length === 0) return null;
 
     const rawType = tracks.length <= 2 ? 'single' : tracks.length <= 6 ? 'ep' : 'album';
     const { category, releaseType } = classifyRelease(entity.name, rawType, tracks.length);
@@ -296,6 +340,54 @@ function shouldKeepTrack(songCat: Category, versionTag: string | null, prefs: Im
     return false;
   }
   return true;
+}
+
+async function fetchDeezerAlbumTracks(
+  albumId: number,
+  fallbackTracks?: {
+    track_position?: number;
+    disk_number?: number;
+    title: string;
+    duration?: number;
+    explicit_lyrics?: boolean;
+  }[]
+): Promise<RawTrack[]> {
+  type DeezerTrackItem = {
+    track_position?: number;
+    disk_number?: number;
+    title: string;
+    duration?: number;
+    explicit_lyrics?: boolean;
+  };
+  const rawItems: DeezerTrackItem[] = [];
+
+  try {
+    let nextUrl: string | null = `https://api.deezer.com/album/${albumId}/tracks?limit=100`;
+    let pageCount = 0;
+    while (nextUrl && pageCount < 6) {
+      const page: { data?: DeezerTrackItem[]; next?: string } = await fetchJsonWithRetry<{
+        data?: DeezerTrackItem[];
+        next?: string;
+      }>(nextUrl);
+      if (page.data?.length) rawItems.push(...page.data);
+      nextUrl = page.next || null;
+      pageCount++;
+      if (nextUrl) await sleep(80);
+    }
+  } catch {
+    // fall back to album detail payload tracks if /tracks endpoint fails
+  }
+
+  const sourceList = rawItems.length > 0 ? rawItems : fallbackTracks || [];
+  return sourceList.map((t, i) => ({
+    track_number: t.track_position || i + 1,
+    disc_number: t.disk_number || 1,
+    title: t.title,
+    duration_ms: t.duration ? t.duration * 1000 : null,
+    spotify_id: null,
+    spotify_url: null,
+    is_explicit: Boolean(t.explicit_lyrics),
+  }));
 }
 
 export function startArtistImportJob(db: Db, req: ArtistImportRequest): string {
@@ -549,6 +641,50 @@ async function executeJob(
                 existing.release_date = item.release_date;
                 existing.release_year = parseReleaseYear(item.release_date);
               }
+              const mightNeedDiscOrTracks =
+                existing.tracks.length === 0 ||
+                (existing.source === 'spotify_embed' && existing.tracks.length >= 18);
+              if (mightNeedDiscOrTracks) {
+                try {
+                  const dzTracks = await fetchDeezerAlbumTracks(item.id);
+                  if (dzTracks.length > 0) {
+                    if (existing.tracks.length === 0) {
+                      existing.tracks = dzTracks;
+                    } else if (
+                      dzTracks.some((t) => t.disc_number > 1) ||
+                      dzTracks.length > existing.tracks.length
+                    ) {
+                      const existingByNorm = new Map<string, RawTrack[]>();
+                      for (const tr of existing.tracks) {
+                        const k = normalizeTitle(tr.title);
+                        const list = existingByNorm.get(k) || [];
+                        list.push(tr);
+                        existingByNorm.set(k, list);
+                      }
+                      const sameCount = dzTracks.length === existing.tracks.length;
+                      const mergedTracks: RawTrack[] = dzTracks.map((dz, idx) => {
+                        const k = normalizeTitle(dz.title);
+                        const matches = existingByNorm.get(k);
+                        const matched =
+                          matches?.shift() || (sameCount ? existing.tracks[idx] : undefined);
+                        if (matched) {
+                          return {
+                            ...matched,
+                            disc_number: dz.disc_number || matched.disc_number || 1,
+                            track_number: dz.track_number || matched.track_number,
+                          };
+                        }
+                        return dz;
+                      });
+                      if (mergedTracks.length >= existing.tracks.length) {
+                        existing.tracks = mergedTracks;
+                      }
+                    }
+                  }
+                } catch {
+                  // keep existing tracks
+                }
+              }
               continue;
             }
             try {
@@ -565,15 +701,7 @@ async function executeJob(
                 };
               }>(`https://api.deezer.com/album/${item.id}`);
               if (det.artist?.id && String(det.artist.id) !== String(deezerId)) continue;
-              const tracks: RawTrack[] = (det.tracks?.data || []).map((t, i) => ({
-                track_number: t.track_position || i + 1,
-                disc_number: t.disk_number || 1,
-                title: t.title,
-                duration_ms: t.duration ? t.duration * 1000 : null,
-                spotify_id: null,
-                spotify_url: null,
-                is_explicit: Boolean(t.explicit_lyrics),
-              }));
+              const tracks = await fetchDeezerAlbumTracks(item.id, det.tracks?.data);
               if (!tracks.length) continue;
               const { category, releaseType } = classifyRelease(item.title, item.record_type, tracks.length);
               rawReleases.push({
@@ -629,7 +757,7 @@ async function executeJob(
                   trackTimeMillis?: number;
                   trackExplicitness?: string;
                 }[];
-              }>(`https://itunes.apple.com/lookup?id=${col.collectionId}&entity=song`);
+              }>(`https://itunes.apple.com/lookup?id=${col.collectionId}&entity=song&limit=200`);
               const tracks: RawTrack[] = (det.results || [])
                 .filter((x) => x.wrapperType === 'track')
                 .map((t, i) => ({
@@ -640,7 +768,8 @@ async function executeJob(
                   spotify_id: null,
                   spotify_url: null,
                   is_explicit: t.trackExplicitness === 'explicit',
-                }));
+                }))
+                .sort((a, b) => a.disc_number - b.disc_number || a.track_number - b.track_number);
               if (!tracks.length) continue;
               const rawType = /- EP$/i.test(col.collectionName)
                 ? 'ep'
@@ -865,6 +994,26 @@ async function persistArtistCatalog(
   const pendingLinks: InStatement[] = [];
 
   for (const rel of sortedReleases) {
+    if (!rel.tracks || rel.tracks.length === 0) continue;
+
+    const evaluatedTracks = rel.tracks.map((track) => {
+      const parsed = parseTrackVersion(track.title, rel);
+      const songCat = determineSongCategory(parsed.versionTag, rel.category);
+      return { track, parsed, songCat };
+    });
+    let keptTracks = evaluatedTracks.filter((item) =>
+      shouldKeepTrack(item.songCat, item.parsed.versionTag, payload.prefs)
+    );
+    if (keptTracks.length === 0) {
+      const isEssentialCollection =
+        rel.category === 'Studio Albums' ||
+        rel.category === 'EPs' ||
+        rel.category === 'Singles' ||
+        rel.release_type === 'compilation';
+      if (!isEssentialCollection) continue;
+      keptTracks = evaluatedTracks;
+    }
+
     let releaseId: number | null = null;
     const normRelTitle = normalizeTitle(rel.title);
     if (rel.spotify_id && relBySp.has(rel.spotify_id)) {
@@ -902,6 +1051,15 @@ async function persistArtistCatalog(
          WHERE primary_release_id = ? AND version_tag IS NULL`,
         [rel.category, isSongSecondary(rel.category, null), releaseId]
       );
+      if (keptTracks.some((item) => (item.track.disc_number || 1) > 1)) {
+        const discRow = await db.get<{ max_disc: number | null; cnt: number }>(
+          `SELECT MAX(disc_number) AS max_disc, COUNT(*) AS cnt FROM release_songs WHERE release_id = ?`,
+          [releaseId]
+        );
+        if (discRow && Number(discRow.cnt) > 0 && Number(discRow.max_disc || 1) <= 1) {
+          await db.run(`DELETE FROM release_songs WHERE release_id = ?`, [releaseId]);
+        }
+      }
     }
 
     if (!releaseId) {
@@ -941,10 +1099,8 @@ async function persistArtistCatalog(
       addedReleases++;
     }
 
-    for (const track of rel.tracks) {
-      const { cleanTitle, versionTag, baseNorm, versionNorm } = parseTrackVersion(track.title, rel);
-      const songCat = determineSongCategory(versionTag, rel.category);
-      if (!shouldKeepTrack(songCat, versionTag, payload.prefs)) continue;
+    for (const { track, parsed, songCat } of keptTracks) {
+      const { cleanTitle, versionTag, baseNorm, versionNorm } = parsed;
 
       const canonicalKey = `${artistId}::${baseNorm}::${versionNorm}`;
       const existingSong = songMap.get(canonicalKey);
@@ -1016,5 +1172,19 @@ async function persistArtistCatalog(
     await db.batch(pendingLinks);
   }
 
+  if (payload.existingArtistId) {
+    await db.run(
+      `DELETE FROM releases
+       WHERE artist_id = ?
+         AND NOT EXISTS (SELECT 1 FROM release_songs rs WHERE rs.release_id = releases.id)
+         AND NOT EXISTS (SELECT 1 FROM release_ratings rr WHERE rr.release_id = releases.id)
+         AND NOT EXISTS (SELECT 1 FROM notes n WHERE n.target_type = 'release' AND n.target_id = releases.id)
+         AND NOT EXISTS (SELECT 1 FROM release_best_tracks rbt WHERE rbt.release_id = releases.id)`,
+      [artistId]
+    );
+  }
+
   return { artistId, artistSlug, artistName: payload.name, addedReleases, addedSongs };
 }
+
+export { persistArtistCatalog, shouldKeepTrack, shouldKeepRelease };

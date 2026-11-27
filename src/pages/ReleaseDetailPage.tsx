@@ -81,6 +81,24 @@ export function ReleaseDetailPage() {
     !release.spotify_id &&
     !release.verification_note?.startsWith('Перевірено через');
 
+  const discGroups: { discNumber: number; tracks: typeof release.tracks }[] = [];
+  for (const track of release.tracks) {
+    const discNum = track.disc_number || 1;
+    const lastGroup = discGroups[discGroups.length - 1];
+    if (lastGroup && lastGroup.discNumber === discNum) {
+      lastGroup.tracks.push(track);
+    } else {
+      const existingGroup = discGroups.find((g) => g.discNumber === discNum);
+      if (existingGroup) {
+        existingGroup.tracks.push(track);
+      } else {
+        discGroups.push({ discNumber: discNum, tracks: [track] });
+      }
+    }
+  }
+  discGroups.sort((a, b) => a.discNumber - b.discNumber);
+  const isMultiDisc = discGroups.length > 1;
+
   const handleSongUpdated = (
     songId: number,
     patch: { rating?: number | null; note?: string }
@@ -217,6 +235,12 @@ export function ReleaseDetailPage() {
                   <ListMusic className="w-4 h-4 text-[#6b7280]" />
                   {t.tracksRatedSummary(release.track_count, release.rated_track_count)}
                 </span>
+                {isMultiDisc && (
+                  <span className="inline-flex items-center gap-1.5 font-mono-num text-xs px-2.5 py-1 rounded-lg bg-[#e09f5a]/10 border border-[#e09f5a]/25 text-[#e09f5a] font-medium">
+                    <Disc3 className="w-3.5 h-3.5 shrink-0" />
+                    {t.discsCount(discGroups.length)}
+                  </span>
+                )}
                 {release.average_track_rating !== null && (
                   <span className="font-mono-num text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
                     {t.avgTrackScore} <strong className="text-[#f3efe6]">{release.average_track_rating}</strong>
@@ -346,11 +370,18 @@ export function ReleaseDetailPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-display text-xl font-bold text-[#f3efe6]">
-          {t.tracklistTitle(release.tracks.length)}
-        </h2>
-        <div className="space-y-3">
-          {release.tracks.map((track) => (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="font-display text-xl font-bold text-[#f3efe6]">
+            {t.tracklistTitle(release.tracks.length)}
+          </h2>
+          {isMultiDisc && (
+            <span className="text-xs font-medium text-[#9ca3af] font-mono-num">
+              {t.discsCount(discGroups.length)}
+            </span>
+          )}
+        </div>
+        {(() => {
+          const renderSongRow = (track: (typeof release.tracks)[number]) => (
             <SongRow
               key={`${track.id}-${track.disc_number}-${track.track_number}`}
               song={track}
@@ -361,8 +392,30 @@ export function ReleaseDetailPage() {
               onToggleBestTrack={() => void handleToggleBestTrack(track.id)}
               onSongUpdated={handleSongUpdated}
             />
-          ))}
-        </div>
+          );
+          if (!isMultiDisc) {
+            return <div className="space-y-3">{release.tracks.map(renderSongRow)}</div>;
+          }
+          return (
+            <div className="space-y-6">
+              {discGroups.map((group) => (
+                <div key={group.discNumber} className="space-y-3">
+                  <div className="flex items-center gap-3 px-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-[#13151c] border border-white/[0.08] text-xs font-bold text-[#f3efe6]">
+                      <Disc3 className="w-3.5 h-3.5 text-[#e09f5a]" />
+                      <span>{t.discLabel(group.discNumber)}</span>
+                    </div>
+                    <div className="h-px flex-1 bg-white/[0.08]" />
+                    <span className="text-xs font-mono-num text-[#9ca3af]">
+                      {t.discTracksCount(group.tracks.length)}
+                    </span>
+                  </div>
+                  <div className="space-y-3">{group.tracks.map(renderSongRow)}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </section>
     </div>
   );

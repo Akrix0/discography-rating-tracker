@@ -241,6 +241,9 @@ export const UI_TEXT = {
       'Не залежить від середньої оцінки окремих композицій — оцініть реліз як цілісний проєкт.',
     releaseNotePlaceholder: 'Загальні враження від альбому або релізу...',
     tracklistTitle: (n: number) => `Список композицій (${n})`,
+    discLabel: (n: number) => `Диск ${n}`,
+    discsCount: (n: number) => (n === 1 ? '1 диск' : n >= 2 && n <= 4 ? `${n} диски` : `${n} дисків`),
+    discTracksCount: (n: number) => (n === 1 ? '1 трек' : n >= 2 && n <= 4 ? `${n} треки` : `${n} треків`),
 
     // RatingControl & SpotifyEmbed & SongRow
     unratedText: 'Неоцінено',
@@ -631,6 +634,9 @@ export const UI_TEXT = {
       'Independent from individual track scores — rate the release as a whole project.',
     releaseNotePlaceholder: 'Overall thoughts about this release...',
     tracklistTitle: (n: number) => `Tracklist (${n})`,
+    discLabel: (n: number) => `Disc ${n}`,
+    discsCount: (n: number) => (n === 1 ? '1 disc' : `${n} discs`),
+    discTracksCount: (n: number) => (n === 1 ? '1 track' : `${n} tracks`),
 
     // RatingControl & SpotifyEmbed & SongRow
     unratedText: 'Unrated',
